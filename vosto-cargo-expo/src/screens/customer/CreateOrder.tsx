@@ -1,12 +1,13 @@
 import { ArrowRight, Star } from 'lucide-react-native';
 import React, { useContext, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { parseOrderRequest } from '../../api/ai';
 import { createOrderRequest } from '../../api/orders';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 
 export default function CreateOrder() {
-  const { showToast, loadOrders, navigate } = useContext(AppContext);
+  const { showToast, loadOrders, navigate, currentUserId } = useContext(AppContext);
 
   const [tab, setTab] = useState('ai');
   const [aiText, setAiText] = useState(
@@ -24,10 +25,42 @@ export default function CreateOrder() {
   const [volume, setVolume] = useState('');
   const [price, setPrice] = useState('20000');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+
+  const onParseOrder = async () => {
+    try {
+      setIsParsing(true);
+      const data = await parseOrderRequest(aiText);
+      const parsedCargo = data?.cargo || {};
+      const parsedRoute = data?.route || {};
+      const estimatedPrice = data?.estimatedPrice || {};
+
+      setCargoDescription(parsedCargo.description || aiText);
+      setWeight(String(parsedCargo.weight || ''));
+      setVolume(String(parsedCargo.volume || ''));
+      setFromCity(parsedRoute.from || '');
+      setToCity(parsedRoute.to || '');
+      setPrice(String(estimatedPrice.max || estimatedPrice.min || ''));
+
+      showToast('Данные распознаны');
+      setTab('manual');
+    } catch (error: any) {
+      console.log('AI PARSE ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось распознать текст');
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   const onCreateOrder = async () => {
     try {
       setIsSubmitting(true);
+
+      const normalizedCargo = {
+        description: cargoDescription.trim(),
+        weight: Number(weight) || 0,
+        volume: Number(volume) || 0,
+      };
 
       const payload = {
         route: {
@@ -40,14 +73,17 @@ export default function CreateOrder() {
             address: toAddress.trim(),
           },
         },
-        cargoDetails: {
-          description: cargoDescription.trim(),
-          weight: Number(weight) || 0,
-          volume: Number(volume) || 0,
-        },
+
+        // для новой структуры фронта
+        cargoDetails: normalizedCargo,
+
+        // для совместимости со старым бэком
+        cargo: normalizedCargo,
+
         pricing: {
           customerOffer: Number(price) || 0,
         },
+        customerId: currentUserId,
       };
 
       console.log('CREATE ORDER PAYLOAD:', payload);
@@ -116,12 +152,12 @@ export default function CreateOrder() {
 
           <TouchableOpacity
             style={[styles.btnBlue, styles.row, styles.justifyCenter]}
-            onPress={() => {
-              showToast('Данные распознаны!');
-              setTab('manual');
-            }}
+            onPress={onParseOrder}
+            disabled={isParsing}
           >
-            <Text style={styles.btnTextWhite}>Заполнить форму </Text>
+            <Text style={styles.btnTextWhite}>
+              {isParsing ? 'Распознаю...' : 'Заполнить форму '}
+            </Text>
             <ArrowRight size={16} color="white" style={styles.ml1} />
           </TouchableOpacity>
         </View>

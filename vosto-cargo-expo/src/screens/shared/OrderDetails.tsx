@@ -7,13 +7,31 @@ import {
 } from 'lucide-react-native';
 import React, { useContext } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { acceptBidRequest } from '../../api/bids';
 import MapPlaceholder from '../../components/MapPlaceholder';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 
 export default function OrderDetails() {
-  const { navigate, orders, role, showToast } = useContext(AppContext);
-  const order = orders.find((o: any) => o.status === 'IN_TRANSIT') || orders[0];
+  const { navigate, orders, role, showToast, params, loadOrders } = useContext(AppContext);
+  const order =
+    orders.find((o: any) => o._id === params?.id) ||
+    orders.find((o: any) => o.status === 'IN_TRANSIT') ||
+    orders[0];
+
+  const onAcceptBid = async (bidId: string) => {
+    if (!order?._id || !bidId) return;
+
+    try {
+      await acceptBidRequest(order._id, bidId);
+      showToast('Предложение принято');
+      await loadOrders?.();
+      navigate('Home');
+    } catch (error: any) {
+      console.log('ACCEPT BID ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось принять предложение');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
@@ -102,7 +120,7 @@ export default function OrderDetails() {
 
               <TouchableOpacity
                 style={styles.btnGreen}
-                onPress={() => showToast('Предложение принято')}
+                onPress={() => onAcceptBid(b._id)}
               >
                 <Text style={styles.btnTextWhite}>Принять</Text>
               </TouchableOpacity>

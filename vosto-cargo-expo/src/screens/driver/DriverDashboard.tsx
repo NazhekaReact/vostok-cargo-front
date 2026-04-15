@@ -1,17 +1,35 @@
 import { Camera, CheckCircle2, MapPin, Navigation } from 'lucide-react-native';
 import React, { useContext, useState } from 'react';
 import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { updateDriverOrderStatusRequest } from '../../api/driver';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 
 export default function DriverDashboard() {
-  const { navigate, orders, showToast } = useContext(AppContext);
+  const { navigate, orders, showToast, loadOrders } = useContext(AppContext);
   const [gpsActive, setGpsActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeOrder = orders.find((o: any) =>
-    ['ASSIGNED', 'IN_TRANSIT', 'AT_DROP'].includes(o.status)
+    ['ASSIGNED', 'AT_PICKUP', 'IN_TRANSIT', 'AT_DROP'].includes(o.status)
   );
+
+  const updateStatus = async (status: string, successMessage: string) => {
+    if (!activeOrder?._id) return;
+
+    try {
+      setIsSubmitting(true);
+      await updateDriverOrderStatusRequest(activeOrder._id, status);
+      showToast(successMessage);
+      await loadOrders?.();
+    } catch (error: any) {
+      console.log('DRIVER STATUS ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось обновить статус');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
@@ -62,10 +80,39 @@ export default function DriverDashboard() {
           {activeOrder.status === 'ASSIGNED' && (
             <TouchableOpacity
               style={styles.btnOrange}
-              onPress={() => showToast('Статус обновлен')}
+              onPress={() => updateStatus('AT_PICKUP', 'Прибытие отмечено')}
+              disabled={isSubmitting}
             >
               <MapPin size={18} color="white" />
-              <Text style={styles.btnTextWhite}>Прибыл на погрузку</Text>
+              <Text style={styles.btnTextWhite}>
+                {isSubmitting ? 'Обновляю...' : 'Прибыл на погрузку'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {activeOrder.status === 'AT_PICKUP' && (
+            <TouchableOpacity
+              style={styles.btnOrange}
+              onPress={() => updateStatus('IN_TRANSIT', 'Рейс начат')}
+              disabled={isSubmitting}
+            >
+              <Navigation size={18} color="white" />
+              <Text style={styles.btnTextWhite}>
+                {isSubmitting ? 'Обновляю...' : 'Начать рейс'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {activeOrder.status === 'IN_TRANSIT' && (
+            <TouchableOpacity
+              style={styles.btnOrange}
+              onPress={() => updateStatus('AT_DROP', 'Прибытие на выгрузку отмечено')}
+              disabled={isSubmitting}
+            >
+              <MapPin size={18} color="white" />
+              <Text style={styles.btnTextWhite}>
+                {isSubmitting ? 'Обновляю...' : 'Прибыл на выгрузку'}
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -77,10 +124,13 @@ export default function DriverDashboard() {
               <Text style={styles.podText}>Загрузить фотоотчет (PoD)</Text>
               <TouchableOpacity
                 style={styles.btnGreen}
-                onPress={() => showToast('Рейс завершен')}
+                onPress={() => updateStatus('DELIVERED', 'Рейс завершен')}
+                disabled={isSubmitting}
               >
                 <CheckCircle2 size={18} color="white" />
-                <Text style={styles.btnTextWhite}> Завершить рейс</Text>
+                <Text style={styles.btnTextWhite}>
+                  {isSubmitting ? 'Обновляю...' : ' Завершить рейс'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}

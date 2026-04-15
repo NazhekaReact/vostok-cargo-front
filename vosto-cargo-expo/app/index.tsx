@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { getOrdersRequest } from '../src/api/orders';
+import { getUsersRequest } from '../src/api/users';
 import Toast from '../src/components/Toast';
 import AppContext from '../src/context/AppContext';
 import { getNavItems } from '../src/navigation/navItems';
@@ -16,6 +17,7 @@ export default function Index() {
   const [toastMsg, setToastMsg] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
 
   const navigate = (screen: string, params = {}) => {
     setCurrentScreen(screen);
@@ -27,10 +29,12 @@ export default function Index() {
     setTimeout(() => setToastMsg(''), 2500);
   };
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoadingOrders(true);
-      const data = await getOrdersRequest();
+      const currentUser = users.find((user: any) => user.role === role);
+      const params = currentUser?._id ? { role, userId: currentUser._id } : {};
+      const data = await getOrdersRequest(params);
       console.log('ORDERS:', data);
 
       setOrders(Array.isArray(data) ? data : data.orders || []);
@@ -40,23 +44,40 @@ export default function Index() {
     } finally {
       setLoadingOrders(false);
     }
-  };
+  }, [role, users]);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const data = await getUsersRequest();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.log('loadUsers error:', error?.response?.data || error?.message);
+    }
+  }, []);
 
   useEffect(() => {
     navigate('Home');
   }, [role]);
 
   useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
 
   const navItems = getNavItems(role);
+  const currentUser = users.find((user: any) => user.role === role);
 
   return (
     <SafeAreaProvider>
       <AppContext.Provider
         value={{
           role,
+          currentUser,
+          currentUserId: currentUser?._id,
+          users,
           navigate,
           orders,
           setOrders,
