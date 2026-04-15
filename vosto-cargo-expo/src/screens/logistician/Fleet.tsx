@@ -18,8 +18,6 @@ import {
 } from '../../api/fleet';
 import BottomSheet from '../../components/BottomSheet';
 import AppContext from '../../context/AppContext';
-import { MOCK_DRIVERS } from '../../data/mockDrivers';
-import { MOCK_VEHICLES } from '../../data/mockVehicles';
 import styles from '../../styles/appStyles';
 
 export default function Fleet() {
@@ -36,9 +34,6 @@ export default function Fleet() {
   const [volume, setVolume] = useState('82');
   const [telegramId, setTelegramId] = useState('706284378');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const visibleVehicles = vehicles.length ? vehicles : MOCK_VEHICLES;
-  const visibleDrivers = drivers.length ? drivers : MOCK_DRIVERS;
 
   const loadFleet = useCallback(async () => {
     if (!currentUserId) return;
@@ -58,7 +53,7 @@ export default function Fleet() {
 
   const onAddVehicle = async () => {
     if (!currentUserId) {
-      showToast('Нужен логист для сохранения');
+      showToast('Нет логиста для сохранения');
       return;
     }
 
@@ -87,7 +82,7 @@ export default function Fleet() {
 
   const onAddDriver = async () => {
     if (!currentUserId) {
-      showToast('Нужен логист для добавления');
+      showToast('Нет логиста для добавления');
       return;
     }
 
@@ -112,6 +107,11 @@ export default function Fleet() {
     const driverId = drivers[0]?._id;
     if (!vehicleId || !driverId) {
       showToast('Сначала добавьте водителя');
+      return;
+    }
+
+    if (!currentUserId) {
+      showToast('Нет логиста для закрепления');
       return;
     }
 
@@ -169,7 +169,7 @@ export default function Fleet() {
         </View>
 
         {tab === 'cars' &&
-          visibleVehicles.map(v => (
+          vehicles.map(v => (
             <View key={v._id} style={styles.card}>
               <TouchableOpacity style={styles.deleteBtnAbs}>
                 <Trash2 size={16} color="#f87171" />
@@ -228,8 +228,12 @@ export default function Fleet() {
             </View>
           ))}
 
+        {tab === 'cars' && !vehicles.length && (
+          <Text style={styles.emptyText}>Машин пока нет</Text>
+        )}
+
         {tab === 'drivers' &&
-          visibleDrivers.map(d => (
+          drivers.map(d => (
             <View key={d._id} style={[styles.card, styles.row, styles.justifyBetween]}>
               <View style={styles.row}>
                 <View style={styles.avatarOrange}>
@@ -249,6 +253,10 @@ export default function Fleet() {
               </TouchableOpacity>
             </View>
           ))}
+
+        {tab === 'drivers' && !drivers.length && (
+          <Text style={styles.emptyText}>Водителей пока нет</Text>
+        )}
       </ScrollView>
 
       <BottomSheet

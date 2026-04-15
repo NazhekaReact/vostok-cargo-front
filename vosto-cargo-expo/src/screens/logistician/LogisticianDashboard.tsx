@@ -9,7 +9,7 @@ import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 
 export default function LogisticianDashboard() {
-  const { navigate, orders, showToast, currentUserId, loadOrders } = useContext(AppContext);
+  const { navigate, orders, showToast, currentUserId, currentUser, loadOrders } = useContext(AppContext);
   const [tab, setTab] = useState('search');
   const [bidOrder, setBidOrder] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState('25000');
@@ -53,8 +53,13 @@ export default function LogisticianDashboard() {
   }, [currentUserId]);
 
   const onPlaceBid = async () => {
-    if (!bidOrder?._id || !currentUserId) {
-      showToast('Нужен логист для ставки');
+    if (!bidOrder?._id) {
+      showToast('Выберите заказ');
+      return;
+    }
+
+    if (!currentUserId) {
+      showToast('Нет логиста для ставки');
       return;
     }
 
@@ -64,6 +69,7 @@ export default function LogisticianDashboard() {
         amount: Number(bidAmount) || 0,
         comment: bidComment,
         logisticianId: currentUserId,
+        logisticianName: currentUser?.name,
       });
       showToast('Ставка отправлена');
       setBidOrder(null);

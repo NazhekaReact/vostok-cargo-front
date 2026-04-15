@@ -13,7 +13,30 @@ import { MOCK_USER } from '../../data/mockUser';
 import styles from '../../styles/appStyles';
 
 export default function ProfileMenu() {
-  const { navigate } = useContext(AppContext);
+  const {
+    navigate,
+    currentUser,
+    currentUserId,
+    role,
+    language,
+    theme,
+    isDark,
+    saveTheme,
+    gpsActive,
+    saveCurrentLocation,
+    logout,
+  } = useContext(AppContext);
+
+  const userName = currentUser?.name || MOCK_USER.name;
+  const userRating = currentUser?.rating || MOCK_USER.rating;
+  const userId = currentUserId || MOCK_USER.id;
+  const companyName = currentUser?.company?.name || MOCK_USER.company.name;
+  const currentLanguageLabel =
+    language === 'ru'
+      ? 'русский'
+      : language === 'en'
+        ? 'English'
+        : language;
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
@@ -28,9 +51,9 @@ export default function ProfileMenu() {
             </View>
           </View>
           <View style={styles.ml4}>
-            <Text style={styles.profileName}>{MOCK_USER.name}</Text>
+            <Text style={[styles.profileName, isDark && styles.textWhite]}>{userName}</Text>
             <View style={styles.row}>
-              <Text style={styles.textGraySm}>Заказчик </Text>
+              <Text style={styles.textGraySm}>{role} </Text>
               <ChevronDown size={14} color="#6b7280" />
             </View>
           </View>
@@ -38,22 +61,22 @@ export default function ProfileMenu() {
 
         <View style={styles.ratingBadge}>
           <Star size={14} color="white" fill="white" />
-          <Text style={styles.ratingText}> {MOCK_USER.rating}</Text>
+          <Text style={styles.ratingText}> {userRating}</Text>
         </View>
       </View>
 
       <View style={styles.idTag}>
-        <Text style={styles.idTagText}>Ваш ID: {MOCK_USER.id}</Text>
+        <Text style={styles.idTagText}>Ваш ID: {userId}</Text>
       </View>
 
-      <View style={[styles.card, styles.rounded3xl]}>
+      <View style={[styles.card, styles.rounded3xl, isDark && styles.cardDark]}>
         <View style={[styles.row, styles.mb4]}>
           <View style={styles.companyLogo}>
             <Text style={styles.companyLogoText}>monumfo</Text>
           </View>
           <View style={styles.ml3}>
-            <Text style={styles.fontBold}>Ваша компания</Text>
-            <Text style={styles.textGraySm}>{MOCK_USER.company.name}</Text>
+            <Text style={[styles.fontBold, isDark && styles.textWhite]}>Ваша компания</Text>
+            <Text style={styles.textGraySm}>{companyName}</Text>
           </View>
         </View>
         <TouchableOpacity style={[styles.btnBlue, styles.row, styles.justifyCenter]}>
@@ -62,44 +85,50 @@ export default function ProfileMenu() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.card, styles.row, styles.justifyBetween, styles.itemsCenter]}>
+      <View style={[styles.card, styles.row, styles.justifyBetween, styles.itemsCenter, isDark && styles.cardDark]}>
         <View style={styles.row}>
           <MapPin size={20} color="#3b82f6" />
-          <Text style={[styles.fontMedium, styles.ml2]}>Геопозиция</Text>
+          <Text style={[styles.fontMedium, styles.ml2, isDark && styles.textWhite]}>
+            Геопозиция
+          </Text>
         </View>
         <Switch
-          value={true}
-          onValueChange={() => {}}
+          value={gpsActive}
+          onValueChange={saveCurrentLocation}
           trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
         />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Настройки</Text>
+      <View style={[styles.card, isDark && styles.cardDark]}>
+        <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>Настройки</Text>
         <View>
           <TouchableOpacity style={styles.settingsItem}>
-            <Text style={styles.fontMedium}>Конфиденциальность</Text>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Конфиденциальность</Text>
             <ChevronRight size={20} color="#9ca3af" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingsItem} onPress={() => navigate('Language')}>
-            <Text style={styles.fontMedium}>Язык</Text>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Язык</Text>
             <View style={styles.row}>
-              <Text style={styles.textGraySm}>русский </Text>
+              <Text style={styles.textGraySm}>{currentLanguageLabel} </Text>
               <ChevronRight size={20} color="#9ca3af" />
             </View>
           </TouchableOpacity>
 
           <View style={styles.settingsItemNoBorder}>
-            <Text style={styles.fontMedium}>Тёмная тема</Text>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Тёмная тема</Text>
             <Switch
-              value={false}
-              onValueChange={() => {}}
+              value={theme === 'dark'}
+              onValueChange={(value) => saveTheme(value ? 'dark' : 'light')}
               trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
             />
           </View>
         </View>
       </View>
+
+      <TouchableOpacity style={styles.btnDanger} onPress={logout}>
+        <Text style={styles.btnDangerText}>Выйти</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }

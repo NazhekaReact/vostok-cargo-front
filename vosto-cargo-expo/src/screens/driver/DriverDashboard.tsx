@@ -7,8 +7,7 @@ import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 
 export default function DriverDashboard() {
-  const { navigate, orders, showToast, loadOrders } = useContext(AppContext);
-  const [gpsActive, setGpsActive] = useState(false);
+  const { navigate, orders, showToast, loadOrders, gpsActive, saveCurrentLocation } = useContext(AppContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeOrder = orders.find((o: any) =>
@@ -61,7 +60,7 @@ export default function DriverDashboard() {
           <View style={styles.ml2}>
             <Switch
               value={gpsActive}
-              onValueChange={setGpsActive}
+              onValueChange={saveCurrentLocation}
               trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
             />
           </View>

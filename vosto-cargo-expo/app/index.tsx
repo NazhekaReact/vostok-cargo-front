@@ -3,37 +3,47 @@ import { StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { getOrdersRequest } from '../src/api/orders';
-import { getUsersRequest } from '../src/api/users';
+import { saveLocationRequest, saveThemeRequest } from '../src/api/users';
 import Toast from '../src/components/Toast';
 import AppContext from '../src/context/AppContext';
 import { getNavItems } from '../src/navigation/navItems';
 import { renderScreen } from '../src/navigation/renderScreen';
+import AuthScreen from '../src/screens/auth/AuthScreen';
 import styles from '../src/styles/appStyles';
 
 export default function Index() {
-  const [role, setRole] = useState('CUSTOMER');
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentScreen, setCurrentScreen] = useState('Home');
   const [screenParams, setScreenParams] = useState({});
   const [toastMsg, setToastMsg] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
+  const [language, setLanguage] = useState('ru');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [gpsActive, setGpsActive] = useState(false);
 
   const navigate = (screen: string, params = {}) => {
     setCurrentScreen(screen);
     setScreenParams(params);
   };
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 2500);
-  };
+  }, []);
+
+  const role = currentUser?.role || '';
+  const currentUserId = currentUser?._id;
 
   const loadOrders = useCallback(async () => {
+    if (!currentUserId || !role) {
+      setOrders([]);
+      return;
+    }
+
     try {
       setLoadingOrders(true);
-      const currentUser = users.find((user: any) => user.role === role);
-      const params = currentUser?._id ? { role, userId: currentUser._id } : {};
+      const params = { role, userId: currentUserId };
       const data = await getOrdersRequest(params);
       console.log('ORDERS:', data);
 
@@ -44,31 +54,111 @@ export default function Index() {
     } finally {
       setLoadingOrders(false);
     }
-  }, [role, users]);
-
-  const loadUsers = useCallback(async () => {
-    try {
-      const data = await getUsersRequest();
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      console.log('loadUsers error:', error?.response?.data || error?.message);
-    }
-  }, []);
+  }, [currentUserId, role, showToast]);
 
   useEffect(() => {
     navigate('Home');
   }, [role]);
 
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
-
-  useEffect(() => {
     loadOrders();
   }, [loadOrders]);
 
+  useEffect(() => {
+    if (currentUser?.language) {
+      setLanguage(currentUser.language);
+    }
+
+    if (currentUser?.theme) {
+      setTheme(currentUser.theme);
+    }
+  }, [currentUser?._id, currentUser?.language, currentUser?.theme]);
+
   const navItems = getNavItems(role);
-  const currentUser = users.find((user: any) => user.role === role);
+  const isDark = theme === 'dark';
+
+  const handleAuth = (user: any) => {
+    setCurrentUser(user);
+    setLanguage(user.language || 'ru');
+    setTheme(user.theme || 'light');
+    setCurrentScreen('Home');
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setOrders([]);
+    setGpsActive(false);
+    setCurrentScreen('Home');
+    showToast('Вы вышли');
+  };
+
+  const saveTheme = async (nextTheme: 'light' | 'dark') => {
+    const previousTheme = theme;
+
+    if (!currentUserId) {
+      showToast('Нет пользователя для сохранения темы');
+      return;
+    }
+
+    try {
+      setTheme(nextTheme);
+      await saveThemeRequest({ userId: currentUserId, theme: nextTheme });
+      showToast('Тема сохранена');
+    } catch (error: any) {
+      console.log('SAVE THEME ERROR:', error?.response?.data || error?.message || error);
+      setTheme(previousTheme);
+      showToast('Бэк не сохранил тему');
+    }
+  };
+
+  const saveCurrentLocation = async (isEnabled: boolean) => {
+    if (!isEnabled) {
+      showToast('GPS выключен');
+      setGpsActive(false);
+      return;
+    }
+
+    if (!currentUserId) {
+      showToast('Нет пользователя для GPS');
+      return;
+    }
+
+    const fallbackLocation = {
+      latitude: 51.1282,
+      longitude: 71.4304,
+    };
+
+    const getBrowserLocation = () =>
+      new Promise<any>((resolve) => {
+        const geolocation = globalThis?.navigator?.geolocation;
+
+        if (!geolocation) {
+          resolve(fallbackLocation);
+          return;
+        }
+
+        geolocation.getCurrentPosition(
+          (position) =>
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }),
+          () => resolve(fallbackLocation),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+        );
+      });
+
+    try {
+      const location = await getBrowserLocation();
+      await saveLocationRequest({ userId: currentUserId, location });
+      setGpsActive(true);
+      showToast('GPS включен');
+    } catch (error: any) {
+      console.log('SAVE LOCATION ERROR:', error?.response?.data || error?.message || error);
+      setGpsActive(false);
+      showToast('Бэк не сохранил GPS');
+    }
+  };
 
   return (
     <SafeAreaProvider>
@@ -76,8 +166,15 @@ export default function Index() {
         value={{
           role,
           currentUser,
-          currentUserId: currentUser?._id,
-          users,
+          currentUserId,
+          language,
+          setLanguage,
+          theme,
+          isDark,
+          saveTheme,
+          gpsActive,
+          saveCurrentLocation,
+          logout,
           navigate,
           orders,
           setOrders,
@@ -87,41 +184,21 @@ export default function Index() {
           params: screenParams,
         }}
       >
-        <SafeAreaView style={styles.appContainer}>
-          <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+        <SafeAreaView style={[styles.appContainer, isDark && styles.appContainerDark]}>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={isDark ? '#111827' : '#f9fafb'}
+          />
 
-          <View style={styles.devBar}>
-            <Text style={styles.devBarTitle}>DEV:</Text>
-
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.devBtn, styles.mr2, role === 'CUSTOMER' && styles.devBtnActive]}
-                onPress={() => setRole('CUSTOMER')}
-              >
-                <Text style={styles.devBtnText}>Заказчик</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.devBtn, styles.mr2, role === 'LOGISTICIAN' && styles.devBtnActive]}
-                onPress={() => setRole('LOGISTICIAN')}
-              >
-                <Text style={styles.devBtnText}>Логист</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.devBtn, role === 'DRIVER' && styles.devBtnActive]}
-                onPress={() => setRole('DRIVER')}
-              >
-                <Text style={styles.devBtnText}>Водитель</Text>
-              </TouchableOpacity>
+          {!currentUser ? (
+            <AuthScreen onAuth={handleAuth} showToast={showToast} />
+          ) : (
+            <View style={styles.flex1}>
+              {renderScreen(currentScreen, role)}
             </View>
-          </View>
+          )}
 
-          <View style={styles.flex1}>
-            {renderScreen(currentScreen, role)}
-          </View>
-
-          {!['Language'].includes(currentScreen) && (
+          {currentUser && !['Language'].includes(currentScreen) && (
             <View style={styles.bottomNav}>
               {navItems.map((item: any) => {
                 const Icon = item.icon;
