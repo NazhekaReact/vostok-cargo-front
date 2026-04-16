@@ -31,6 +31,7 @@ const styles = StyleSheet.create({
 
   fontMedium: { fontWeight: '500', color: '#111827' },
   fontBold: { fontWeight: 'bold', color: '#111827' },
+  textWhite: { color: '#f9fafb' },
   textGrayXs: { fontSize: 12, color: '#9ca3af' },
   textGraySm: { fontSize: 14, color: '#6b7280' },
   textGraySmItalic: { fontSize: 14, color: '#9ca3af', fontStyle: 'italic' },
@@ -56,6 +57,10 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderColor: '#f3f4f6',
     borderWidth: 1,
+  },
+  cardDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
   },
   rounded3xl: { borderRadius: 24 },
   cardHeader: {
@@ -213,6 +218,14 @@ const styles = StyleSheet.create({
   btnTextWhiteLg: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   btnTextBlack: { color: '#111827', fontWeight: 'bold', fontSize: 14 },
   btnLightBlueText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 14 },
+  btnDanger: {
+    backgroundColor: '#fee2e2',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  btnDangerText: { color: '#dc2626', fontWeight: 'bold', fontSize: 14 },
 
   podBox: {
     backgroundColor: '#fff',
@@ -491,6 +504,7 @@ const styles = StyleSheet.create({
   },
 
   langContainer: { flex: 1, backgroundColor: '#1e3a8a' },
+  langContainerDark: { backgroundColor: '#111827' },
   langHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   langTitle: { color: 'white', fontSize: 24, fontWeight: 'bold', marginLeft: 16 },
   langContent: {
@@ -605,6 +619,75 @@ const styles = StyleSheet.create({
   },
   toastText: { color: 'white', fontWeight: '500', fontSize: 14 },
 
+  authContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
+  },
+  authTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  authSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  authCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  inputIconWrap: {
+    width: '100%',
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputIcon: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    color: '#111827',
+  },
+  roleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  rolePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  rolePillActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#3b82f6',
+  },
+  rolePillText: { color: '#6b7280', fontWeight: '600', fontSize: 13 },
+  rolePillTextActive: { color: '#2563eb' },
+
   devBar: {
     backgroundColor: '#111827',
     padding: 8,
@@ -651,6 +734,7 @@ const styles = StyleSheet.create({
   navLabel: { fontSize: 10, fontWeight: '500', marginTop: 4 },
 
   appContainer: { flex: 1, backgroundColor: '#f9fafb' },
+  appContainerDark: { backgroundColor: '#111827' },
 });
 
 export default styles;

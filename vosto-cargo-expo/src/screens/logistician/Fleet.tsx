@@ -7,19 +7,127 @@ import {
     Truck,
     User,
 } from 'lucide-react-native';
-import React, { useContext, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  addDriverRequest,
+  addVehicleRequest,
+  assignDriverToVehicleRequest,
+  getDriversRequest,
+  getVehiclesRequest,
+} from '../../api/fleet';
 import BottomSheet from '../../components/BottomSheet';
 import AppContext from '../../context/AppContext';
-import { MOCK_DRIVERS } from '../../data/mockDrivers';
-import { MOCK_VEHICLES } from '../../data/mockVehicles';
 import styles from '../../styles/appStyles';
 
 export default function Fleet() {
-  const { navigate, showToast } = useContext(AppContext);
+  const { navigate, showToast, currentUserId } = useContext(AppContext);
   const [tab, setTab] = useState('cars');
   const [addCarModal, setAddCarModal] = useState(false);
   const [addDriverModal, setAddDriverModal] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [brand, setBrand] = useState('Volvo FH');
+  const [plateNumber, setPlateNumber] = useState('A 777 AA 777');
+  const [vehicleType, setVehicleType] = useState('TRUCK_20T');
+  const [weight, setWeight] = useState('20000');
+  const [volume, setVolume] = useState('82');
+  const [telegramId, setTelegramId] = useState('706284378');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadFleet = useCallback(async () => {
+    if (!currentUserId) return;
+
+    try {
+      const [vehiclesData, driversData] = await Promise.all([
+        getVehiclesRequest(currentUserId),
+        getDriversRequest(currentUserId),
+      ]);
+      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
+      setDrivers(Array.isArray(driversData) ? driversData : []);
+    } catch (error: any) {
+      console.log('FLEET LOAD ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось загрузить автопарк');
+    }
+  }, [currentUserId, showToast]);
+
+  const onAddVehicle = async () => {
+    if (!currentUserId) {
+      showToast('Нет логиста для сохранения');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await addVehicleRequest({
+        ownerId: currentUserId,
+        brand: brand.trim(),
+        plateNumber: plateNumber.trim(),
+        type: vehicleType,
+        capacity: {
+          weight: Number(weight) || 0,
+          volume: Number(volume) || 0,
+        },
+      });
+      showToast('Машина сохранена');
+      setAddCarModal(false);
+      await loadFleet();
+    } catch (error: any) {
+      console.log('ADD VEHICLE ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось сохранить машину');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onAddDriver = async () => {
+    if (!currentUserId) {
+      showToast('Нет логиста для добавления');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await addDriverRequest({
+        logisticianId: currentUserId,
+        telegramId: telegramId.trim(),
+      });
+      showToast('Водитель добавлен');
+      setAddDriverModal(false);
+      await loadFleet();
+    } catch (error: any) {
+      console.log('ADD DRIVER ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось добавить водителя');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onAssignFirstDriver = async (vehicleId: string) => {
+    const driverId = drivers[0]?._id;
+    if (!vehicleId || !driverId) {
+      showToast('Сначала добавьте водителя');
+      return;
+    }
+
+    if (!currentUserId) {
+      showToast('Нет логиста для закрепления');
+      return;
+    }
+
+    try {
+      await assignDriverToVehicleRequest({ vehicleId, driverId });
+      showToast('Водитель закреплен');
+      await loadFleet();
+    } catch (error: any) {
+      console.log('ASSIGN DRIVER ERROR:', error?.response?.data || error?.message || error);
+      showToast('Не удалось закрепить водителя');
+    }
+  };
+
+  useEffect(() => {
+    loadFleet();
+  }, [loadFleet]);
 
   return (
     <View style={styles.flex1}>
@@ -61,7 +169,7 @@ export default function Fleet() {
         </View>
 
         {tab === 'cars' &&
-          MOCK_VEHICLES.map(v => (
+          vehicles.map(v => (
             <View key={v._id} style={styles.card}>
               <TouchableOpacity style={styles.deleteBtnAbs}>
                 <Trash2 size={16} color="#f87171" />
@@ -112,7 +220,7 @@ export default function Fleet() {
 
                 <TouchableOpacity
                   style={styles.btnLightBlueSm}
-                  onPress={() => showToast('Открыто назначение')}
+                  onPress={() => onAssignFirstDriver(v._id)}
                 >
                   <Text style={styles.btnLightBlueTextSm}>Изменить</Text>
                 </TouchableOpacity>
@@ -120,8 +228,12 @@ export default function Fleet() {
             </View>
           ))}
 
+        {tab === 'cars' && !vehicles.length && (
+          <Text style={styles.emptyText}>Машин пока нет</Text>
+        )}
+
         {tab === 'drivers' &&
-          MOCK_DRIVERS.map(d => (
+          drivers.map(d => (
             <View key={d._id} style={[styles.card, styles.row, styles.justifyBetween]}>
               <View style={styles.row}>
                 <View style={styles.avatarOrange}>
@@ -141,6 +253,10 @@ export default function Fleet() {
               </TouchableOpacity>
             </View>
           ))}
+
+        {tab === 'drivers' && !drivers.length && (
+          <Text style={styles.emptyText}>Водителей пока нет</Text>
+        )}
       </ScrollView>
 
       <BottomSheet
@@ -149,36 +265,56 @@ export default function Fleet() {
         title="Добавить машину"
       >
         <Text style={styles.inputLabel}>Марка и модель</Text>
-        <TextInput style={styles.input} placeholder="Volvo FH" />
+        <TextInput style={styles.input} placeholder="Volvo FH" value={brand} onChangeText={setBrand} />
 
         <Text style={styles.inputLabel}>Гос. номер</Text>
-        <TextInput style={styles.input} placeholder="A 777 AA 777" />
+        <TextInput
+          style={styles.input}
+          placeholder="A 777 AA 777"
+          value={plateNumber}
+          onChangeText={setPlateNumber}
+        />
 
         <Text style={styles.inputLabel}>Тип кузова</Text>
-        <TouchableOpacity style={styles.selectMock}>
-          <Text style={styles.selectMockText}>Фура 20т</Text>
+        <TouchableOpacity
+          style={styles.selectMock}
+          onPress={() => setVehicleType(vehicleType === 'TRUCK_20T' ? 'TRUCK_10T' : 'TRUCK_20T')}
+        >
+          <Text style={styles.selectMockText}>
+            {vehicleType === 'TRUCK_20T' ? 'Фура 20т' : 'Грузовик 10т'}
+          </Text>
           <ChevronDown size={20} color="#9ca3af" />
         </TouchableOpacity>
 
         <View style={[styles.row, styles.mt3]}>
           <View style={[styles.flex1, styles.mr2]}>
             <Text style={styles.inputLabel}>Вес (кг)</Text>
-            <TextInput style={styles.input} defaultValue="20000" keyboardType="numeric" />
+            <TextInput
+              style={styles.input}
+              value={weight}
+              onChangeText={setWeight}
+              keyboardType="numeric"
+            />
           </View>
           <View style={styles.flex1}>
             <Text style={styles.inputLabel}>Объем (м³)</Text>
-            <TextInput style={styles.input} defaultValue="82" keyboardType="numeric" />
+            <TextInput
+              style={styles.input}
+              value={volume}
+              onChangeText={setVolume}
+              keyboardType="numeric"
+            />
           </View>
         </View>
 
         <TouchableOpacity
           style={[styles.btnBlue, styles.mt4]}
-          onPress={() => {
-            showToast('Сохранено');
-            setAddCarModal(false);
-          }}
+          onPress={onAddVehicle}
+          disabled={isSubmitting}
         >
-          <Text style={styles.btnTextWhite}>Сохранить</Text>
+          <Text style={styles.btnTextWhite}>
+            {isSubmitting ? 'Сохраняю...' : 'Сохранить'}
+          </Text>
         </TouchableOpacity>
       </BottomSheet>
 
@@ -191,10 +327,13 @@ export default function Fleet() {
           <TextInput
             style={[styles.input, styles.flex1, styles.mr2, styles.mb0]}
             placeholder="Telegram ID"
-            defaultValue="706284378"
+            value={telegramId}
+            onChangeText={setTelegramId}
           />
-          <TouchableOpacity style={styles.btnBlue} onPress={() => showToast('Поиск...')}>
-            <Text style={styles.btnTextWhite}>Поиск</Text>
+          <TouchableOpacity style={styles.btnBlue} onPress={onAddDriver} disabled={isSubmitting}>
+            <Text style={styles.btnTextWhite}>
+              {isSubmitting ? 'Добавляю...' : 'Добавить'}
+            </Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
