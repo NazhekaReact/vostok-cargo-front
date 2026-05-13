@@ -19,9 +19,10 @@ import {
 import BottomSheet from '../../components/BottomSheet';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function Fleet() {
-  const { navigate, showToast, currentUserId } = useContext(AppContext);
+  const { navigate, showToast, currentUserId, isDark, language } = useContext(AppContext);
   const [tab, setTab] = useState('cars');
   const [addCarModal, setAddCarModal] = useState(false);
   const [addDriverModal, setAddDriverModal] = useState(false);
@@ -135,9 +136,9 @@ export default function Fleet() {
         <View style={[styles.row, styles.justifyBetween, styles.mb6]}>
           <View style={styles.row}>
             <TouchableOpacity onPress={() => navigate('Home')} style={styles.mr3}>
-              <ChevronLeft size={28} color="#000" />
+              <ChevronLeft size={28} color={isDark ? '#f9fafb' : '#000'} />
             </TouchableOpacity>
-            <Text style={styles.screenTitleNoMargin}>Мой автопарк</Text>
+            <Text style={[styles.screenTitleNoMargin, isDark && styles.textWhite]}>{t('fleet.title', language)}</Text>
           </View>
 
           <TouchableOpacity
@@ -148,73 +149,73 @@ export default function Fleet() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tabContainer}>
+        <View style={[styles.tabContainer, isDark && styles.tabContainerDark]}>
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'cars' && styles.tabBtnActive]}
+            style={[styles.tabBtn, tab === 'cars' && styles.tabBtnActive, tab === 'cars' && isDark && styles.tabBtnActiveDark]}
             onPress={() => setTab('cars')}
           >
-            <Text style={[styles.tabBtnText, tab === 'cars' && styles.tabBtnTextActive]}>
-              Машины
+            <Text style={[styles.tabBtnText, tab === 'cars' && styles.tabBtnTextActive, isDark && { color: '#9ca3af' }, tab === 'cars' && isDark && styles.textWhite]}>
+              {t('fleet.cars', language)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'drivers' && styles.tabBtnActive]}
+            style={[styles.tabBtn, tab === 'drivers' && styles.tabBtnActive, tab === 'drivers' && isDark && styles.tabBtnActiveDark]}
             onPress={() => setTab('drivers')}
           >
-            <Text style={[styles.tabBtnText, tab === 'drivers' && styles.tabBtnTextActive]}>
-              Водители
+            <Text style={[styles.tabBtnText, tab === 'drivers' && styles.tabBtnTextActive, isDark && { color: '#9ca3af' }, tab === 'drivers' && isDark && styles.textWhite]}>
+              {t('fleet.drivers', language)}
             </Text>
           </TouchableOpacity>
         </View>
 
         {tab === 'cars' &&
           vehicles.map(v => (
-            <View key={v._id} style={styles.card}>
+            <View key={v._id} style={[styles.card, isDark && styles.cardDark]}>
               <TouchableOpacity style={styles.deleteBtnAbs}>
                 <Trash2 size={16} color="#f87171" />
               </TouchableOpacity>
 
               <View style={[styles.row, styles.mb4]}>
-                <View style={styles.iconBoxBlue}>
+                <View style={[styles.iconBoxBlue, isDark && styles.iconBoxBlueDark]}>
                   <Truck size={20} color="#3b82f6" />
                 </View>
 
                 <View style={styles.ml3}>
-                  <Text style={styles.fontBold}>{v.brand}</Text>
-                  <View style={styles.plateTag}>
+                  <Text style={[styles.fontBold, isDark && styles.textWhite]}>{v.brand}</Text>
+                  <View style={[styles.plateTag, isDark && styles.plateTagDark]}>
                     <Text style={styles.plateTagText}>{v.plateNumber}</Text>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.detailsGrid}>
+              <View style={[styles.detailsGrid, isDark && styles.detailsGridDark]}>
                 <View style={styles.detailsCol}>
-                  <Text style={styles.textGrayXs}>Тип</Text>
-                  <Text style={styles.fontMedium}>Фура 20т</Text>
+                  <Text style={styles.textGrayXs}>{t('fleet.type', language)}</Text>
+                  <Text style={[styles.fontMedium, isDark && styles.textWhite]}>{t('fleet.truck20', language)}</Text>
                 </View>
                 <View style={styles.detailsCol}>
-                  <Text style={styles.textGrayXs}>Г/П</Text>
-                  <Text style={styles.fontMedium}>
+                  <Text style={styles.textGrayXs}>{t('fleet.capacity', language)}</Text>
+                  <Text style={[styles.fontMedium, isDark && styles.textWhite]}>
                     {v.capacity?.weight ? v.capacity.weight / 1000 : 0} т
                   </Text>
                 </View>
                 <View style={styles.detailsCol}>
-                  <Text style={styles.textGrayXs}>Объем</Text>
-                  <Text style={styles.fontMedium}>{v.capacity?.volume || 0} м³</Text>
+                  <Text style={styles.textGrayXs}>{t('fleet.volume', language)}</Text>
+                  <Text style={[styles.fontMedium, isDark && styles.textWhite]}>{v.capacity?.volume || 0} м³</Text>
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
+              <View style={[styles.cardFooter, isDark && { borderTopColor: '#374151' }]}>
                 <View style={styles.row}>
                   <User size={16} color="#9ca3af" />
                   <Text
                     style={[
                       styles.ml1,
-                      v.currentDriver ? styles.fontMedium : styles.textGraySmItalic,
+                      v.currentDriver ? [styles.fontMedium, isDark && styles.textWhite] : styles.textGraySmItalic,
                     ]}
                   >
-                    {v.currentDriver ? v.currentDriver.name : 'Нет водителя'}
+                    {v.currentDriver ? v.currentDriver.name : t('fleet.noDriver', language)}
                   </Text>
                 </View>
 
@@ -222,25 +223,25 @@ export default function Fleet() {
                   style={styles.btnLightBlueSm}
                   onPress={() => onAssignFirstDriver(v._id)}
                 >
-                  <Text style={styles.btnLightBlueTextSm}>Изменить</Text>
+                  <Text style={styles.btnLightBlueTextSm}>{t('fleet.change', language)}</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ))}
 
         {tab === 'cars' && !vehicles.length && (
-          <Text style={styles.emptyText}>Машин пока нет</Text>
+          <Text style={styles.emptyText}>{t('fleet.noCars', language)}</Text>
         )}
 
         {tab === 'drivers' &&
           drivers.map(d => (
-            <View key={d._id} style={[styles.card, styles.row, styles.justifyBetween]}>
+            <View key={d._id} style={[styles.card, styles.row, styles.justifyBetween, isDark && styles.cardDark]}>
               <View style={styles.row}>
                 <View style={styles.avatarOrange}>
                   <User size={24} color="#ea580c" />
                 </View>
                 <View style={styles.ml3}>
-                  <Text style={styles.fontBold}>{d.name}</Text>
+                  <Text style={[styles.fontBold, isDark && styles.textWhite]}>{d.name}</Text>
                   <View style={[styles.row, styles.mt1]}>
                     <MessageCircle size={12} color="#9ca3af" />
                     <Text style={styles.textGrayXs}> {d.telegramId}</Text>
@@ -255,54 +256,57 @@ export default function Fleet() {
           ))}
 
         {tab === 'drivers' && !drivers.length && (
-          <Text style={styles.emptyText}>Водителей пока нет</Text>
+          <Text style={styles.emptyText}>{t('fleet.noDrivers', language)}</Text>
         )}
       </ScrollView>
 
       <BottomSheet
         visible={addCarModal}
         onClose={() => setAddCarModal(false)}
-        title="Добавить машину"
+        title={t('fleet.addVehicle', language)}
       >
-        <Text style={styles.inputLabel}>Марка и модель</Text>
-        <TextInput style={styles.input} placeholder="Volvo FH" value={brand} onChangeText={setBrand} />
+        <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.brand', language)}</Text>
+        <TextInput style={[styles.input, isDark && styles.inputDark]} placeholder="Volvo FH" placeholderTextColor={isDark ? '#6b7280' : undefined} value={brand} onChangeText={setBrand} />
 
-        <Text style={styles.inputLabel}>Гос. номер</Text>
+        <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.plateNumber', language)}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, isDark && styles.inputDark]}
           placeholder="A 777 AA 777"
+          placeholderTextColor={isDark ? '#6b7280' : undefined}
           value={plateNumber}
           onChangeText={setPlateNumber}
         />
 
-        <Text style={styles.inputLabel}>Тип кузова</Text>
+        <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.bodyType', language)}</Text>
         <TouchableOpacity
-          style={styles.selectMock}
+          style={[styles.selectMock, isDark && styles.selectMockDark]}
           onPress={() => setVehicleType(vehicleType === 'TRUCK_20T' ? 'TRUCK_10T' : 'TRUCK_20T')}
         >
-          <Text style={styles.selectMockText}>
-            {vehicleType === 'TRUCK_20T' ? 'Фура 20т' : 'Грузовик 10т'}
+          <Text style={[styles.selectMockText, isDark && styles.selectMockTextDark]}>
+            {vehicleType === 'TRUCK_20T' ? t('fleet.truck20', language) : t('fleet.truck10', language)}
           </Text>
           <ChevronDown size={20} color="#9ca3af" />
         </TouchableOpacity>
 
         <View style={[styles.row, styles.mt3]}>
           <View style={[styles.flex1, styles.mr2]}>
-            <Text style={styles.inputLabel}>Вес (кг)</Text>
+            <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.weightKg', language)}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDark && styles.inputDark]}
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
             />
           </View>
           <View style={styles.flex1}>
-            <Text style={styles.inputLabel}>Объем (м³)</Text>
+            <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.volumeM3', language)}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDark && styles.inputDark]}
               value={volume}
               onChangeText={setVolume}
               keyboardType="numeric"
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
             />
           </View>
         </View>
@@ -313,7 +317,7 @@ export default function Fleet() {
           disabled={isSubmitting}
         >
           <Text style={styles.btnTextWhite}>
-            {isSubmitting ? 'Сохраняю...' : 'Сохранить'}
+            {isSubmitting ? t('fleet.saving', language) : t('fleet.save', language)}
           </Text>
         </TouchableOpacity>
       </BottomSheet>
@@ -321,18 +325,19 @@ export default function Fleet() {
       <BottomSheet
         visible={addDriverModal}
         onClose={() => setAddDriverModal(false)}
-        title="Добавить водителя"
+        title={t('fleet.addDriver', language)}
       >
         <View style={styles.row}>
           <TextInput
-            style={[styles.input, styles.flex1, styles.mr2, styles.mb0]}
+            style={[styles.input, styles.flex1, styles.mr2, styles.mb0, isDark && styles.inputDark]}
             placeholder="Telegram ID"
+            placeholderTextColor={isDark ? '#6b7280' : undefined}
             value={telegramId}
             onChangeText={setTelegramId}
           />
           <TouchableOpacity style={styles.btnBlue} onPress={onAddDriver} disabled={isSubmitting}>
             <Text style={styles.btnTextWhite}>
-              {isSubmitting ? 'Добавляю...' : 'Добавить'}
+              {isSubmitting ? t('fleet.adding', language) : t('fleet.add', language)}
             </Text>
           </TouchableOpacity>
         </View>

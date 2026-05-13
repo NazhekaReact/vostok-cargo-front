@@ -11,6 +11,7 @@ import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import AppContext from '../../context/AppContext';
 import { MOCK_USER } from '../../data/mockUser';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function ProfileMenu() {
   const {
@@ -33,10 +34,12 @@ export default function ProfileMenu() {
   const companyName = currentUser?.company?.name || MOCK_USER.company.name;
   const currentLanguageLabel =
     language === 'ru'
-      ? 'русский'
+      ? 'Русский'
       : language === 'en'
         ? 'English'
-        : language;
+        : language === 'kk'
+          ? 'Қазақша'
+          : language;
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
@@ -65,8 +68,8 @@ export default function ProfileMenu() {
         </View>
       </View>
 
-      <View style={styles.idTag}>
-        <Text style={styles.idTagText}>Ваш ID: {userId}</Text>
+      <View style={[styles.idTag, isDark && { backgroundColor: '#374151' }]}>
+        <Text style={styles.idTagText}>{t('menu.yourId', language)} {userId}</Text>
       </View>
 
       <View style={[styles.card, styles.rounded3xl, isDark && styles.cardDark]}>
@@ -75,12 +78,12 @@ export default function ProfileMenu() {
             <Text style={styles.companyLogoText}>monumfo</Text>
           </View>
           <View style={styles.ml3}>
-            <Text style={[styles.fontBold, isDark && styles.textWhite]}>Ваша компания</Text>
+            <Text style={[styles.fontBold, isDark && styles.textWhite]}>{t('menu.yourCompany', language)}</Text>
             <Text style={styles.textGraySm}>{companyName}</Text>
           </View>
         </View>
         <TouchableOpacity style={[styles.btnBlue, styles.row, styles.justifyCenter]}>
-          <Text style={styles.btnTextWhite}>Изменить компанию </Text>
+          <Text style={styles.btnTextWhite}>{t('menu.changeCompany', language)}</Text>
           <Plus size={16} color="white" />
         </TouchableOpacity>
       </View>
@@ -89,7 +92,7 @@ export default function ProfileMenu() {
         <View style={styles.row}>
           <MapPin size={20} color="#3b82f6" />
           <Text style={[styles.fontMedium, styles.ml2, isDark && styles.textWhite]}>
-            Геопозиция
+            {t('menu.geolocation', language)}
           </Text>
         </View>
         <Switch
@@ -100,15 +103,15 @@ export default function ProfileMenu() {
       </View>
 
       <View style={[styles.card, isDark && styles.cardDark]}>
-        <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>Настройки</Text>
+        <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('menu.settings', language)}</Text>
         <View>
-          <TouchableOpacity style={styles.settingsItem}>
-            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Конфиденциальность</Text>
+          <TouchableOpacity style={[styles.settingsItem, isDark && { borderBottomColor: '#374151' }]} onPress={() => navigate('Privacy')}>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>{t('menu.privacy', language)}</Text>
             <ChevronRight size={20} color="#9ca3af" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingsItem} onPress={() => navigate('Language')}>
-            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Язык</Text>
+          <TouchableOpacity style={[styles.settingsItem, isDark && { borderBottomColor: '#374151' }]} onPress={() => navigate('Language')}>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>{t('menu.language', language)}</Text>
             <View style={styles.row}>
               <Text style={styles.textGraySm}>{currentLanguageLabel} </Text>
               <ChevronRight size={20} color="#9ca3af" />
@@ -116,7 +119,7 @@ export default function ProfileMenu() {
           </TouchableOpacity>
 
           <View style={styles.settingsItemNoBorder}>
-            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>Тёмная тема</Text>
+            <Text style={[styles.fontMedium, isDark && styles.textWhite]}>{t('menu.darkTheme', language)}</Text>
             <Switch
               value={theme === 'dark'}
               onValueChange={(value) => saveTheme(value ? 'dark' : 'light')}
@@ -127,7 +130,7 @@ export default function ProfileMenu() {
       </View>
 
       <TouchableOpacity style={styles.btnDanger} onPress={logout}>
-        <Text style={styles.btnDangerText}>Выйти</Text>
+        <Text style={styles.btnDangerText}>{t('menu.logout', language)}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

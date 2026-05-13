@@ -4,17 +4,15 @@ import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-na
 import { saveLanguageRequest } from '../../api/users';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function LanguageSelector() {
   const { navigate, showToast, language, setLanguage, currentUserId, isDark } = useContext(AppContext);
 
   const langs = [
-    { code: 'en', name: 'English', native: 'English' },
-    { code: 'tj', name: 'Таджикский', native: 'Тоҷикӣ' },
-    { code: 'uz', name: 'Узбекский', native: "O'zbekcha" },
-    { code: 'tr', name: 'Турецкий', native: 'Türkçe' },
-    { code: 'zh', name: 'Китайский', native: '中文' },
     { code: 'ru', name: 'Русский', native: 'Русский' },
+    { code: 'en', name: 'English', native: 'English' },
+    { code: 'kk', name: 'Қазақша', native: 'Қазақ тілі' },
   ];
 
   const onSelectLanguage = async (code: string) => {
@@ -26,7 +24,7 @@ export default function LanguageSelector() {
     try {
       await saveLanguageRequest({ userId: currentUserId, language: code });
       setLanguage(code);
-      showToast('Язык изменен');
+      showToast(code === 'ru' ? 'Язык изменен' : code === 'en' ? 'Language changed' : 'Тіл өзгертілді');
     } catch (error: any) {
       console.log('SAVE LANGUAGE ERROR:', error?.response?.data || error?.message || error);
       showToast('Бэк не сохранил язык');
@@ -43,7 +41,7 @@ export default function LanguageSelector() {
           <TouchableOpacity onPress={() => navigate('Menu')}>
             <ChevronLeft size={28} color="white" />
           </TouchableOpacity>
-          <Text style={styles.langTitle}>Выберите язык</Text>
+          <Text style={styles.langTitle}>{t('lang.title', language)}</Text>
         </View>
       </SafeAreaView>
 

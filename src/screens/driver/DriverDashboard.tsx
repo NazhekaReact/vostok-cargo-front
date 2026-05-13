@@ -5,9 +5,10 @@ import { updateDriverOrderStatusRequest } from '../../api/driver';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function DriverDashboard() {
-  const { navigate, orders, showToast, loadOrders, gpsActive, saveCurrentLocation } = useContext(AppContext);
+  const { navigate, orders, showToast, loadOrders, gpsActive, saveCurrentLocation, isDark, language } = useContext(AppContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeOrder = orders.find((o: any) =>
@@ -32,17 +33,17 @@ export default function DriverDashboard() {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
-      <Text style={styles.screenTitle}>Панель водителя</Text>
+      <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('driver.title', language)}</Text>
 
-      <View style={[styles.card, styles.row, styles.justifyBetween, styles.itemsCenter]}>
+      <View style={[styles.card, styles.row, styles.justifyBetween, styles.itemsCenter, isDark && styles.cardDark]}>
         <View style={styles.row}>
-          <View style={styles.iconBoxGray}>
+          <View style={[styles.iconBoxGray, isDark && styles.iconBoxGrayDark]}>
             <Navigation size={20} color="#6b7280" />
           </View>
           <View style={styles.ml3}>
-            <Text style={styles.fontBold}>GPS Трансляция</Text>
+            <Text style={[styles.fontBold, isDark && styles.textWhite]}>{t('driver.gps', language)}</Text>
             <Text style={styles.textGrayXs}>
-              {gpsActive ? 'Трансляция активна' : 'Трансляция выключена'}
+              {gpsActive ? t('driver.gpsActive', language) : t('driver.gpsOff', language)}
             </Text>
           </View>
         </View>
@@ -53,7 +54,7 @@ export default function DriverDashboard() {
               style={styles.btnSmallBlue}
               onPress={() => showToast('GPS Симуляция')}
             >
-              <Text style={styles.btnSmallBlueText}>Тест GPS</Text>
+              <Text style={styles.btnSmallBlueText}>{t('driver.testGps', language)}</Text>
             </TouchableOpacity>
           )}
 
@@ -67,7 +68,7 @@ export default function DriverDashboard() {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Текущий рейс</Text>
+      <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('driver.currentTrip', language)}</Text>
 
       {activeOrder ? (
         <View style={styles.mb6}>
@@ -84,7 +85,7 @@ export default function DriverDashboard() {
             >
               <MapPin size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? 'Обновляю...' : 'Прибыл на погрузку'}
+                {isSubmitting ? t('driver.updating', language) : t('driver.arrivedPickup', language)}
               </Text>
             </TouchableOpacity>
           )}
@@ -97,7 +98,7 @@ export default function DriverDashboard() {
             >
               <Navigation size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? 'Обновляю...' : 'Начать рейс'}
+                {isSubmitting ? t('driver.updating', language) : t('driver.startTrip', language)}
               </Text>
             </TouchableOpacity>
           )}
@@ -110,17 +111,17 @@ export default function DriverDashboard() {
             >
               <MapPin size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? 'Обновляю...' : 'Прибыл на выгрузку'}
+                {isSubmitting ? t('driver.updating', language) : t('driver.arrivedDrop', language)}
               </Text>
             </TouchableOpacity>
           )}
 
           {activeOrder.status === 'AT_DROP' && (
-            <View style={styles.podBox}>
+            <View style={[styles.podBox, isDark && styles.podBoxDark]}>
               <View style={styles.cameraIconBox}>
                 <Camera size={24} color="#3b82f6" />
               </View>
-              <Text style={styles.podText}>Загрузить фотоотчет (PoD)</Text>
+              <Text style={styles.podText}>{t('driver.uploadPod', language)}</Text>
               <TouchableOpacity
                 style={styles.btnGreen}
                 onPress={() => updateStatus('DELIVERED', 'Рейс завершен')}
@@ -128,17 +129,17 @@ export default function DriverDashboard() {
               >
                 <CheckCircle2 size={18} color="white" />
                 <Text style={styles.btnTextWhite}>
-                  {isSubmitting ? 'Обновляю...' : ' Завершить рейс'}
+                  {isSubmitting ? t('driver.updating', language) : ` ${t('driver.finishTrip', language)}`}
                 </Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       ) : (
-        <Text style={styles.emptyText}>Нет активного рейса</Text>
+        <Text style={styles.emptyText}>{t('driver.noTrip', language)}</Text>
       )}
 
-      <Text style={styles.sectionTitle}>Все заказы</Text>
+      <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('driver.allOrders', language)}</Text>
 
       {orders
         .filter((o: any) => o.status === 'DELIVERED')

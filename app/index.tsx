@@ -74,7 +74,7 @@ export default function Index() {
     }
   }, [currentUser?._id, currentUser?.language, currentUser?.theme]);
 
-  const navItems = getNavItems(role);
+  const navItems = getNavItems(role, language);
   const isDark = theme === 'dark';
 
   const handleAuth = (user: any) => {
@@ -198,8 +198,8 @@ export default function Index() {
             </View>
           )}
 
-          {currentUser && !['Language'].includes(currentScreen) && (
-            <View style={styles.bottomNav}>
+          {currentUser && !['Language', 'Privacy'].includes(currentScreen) && (
+            <View style={[styles.bottomNav, isDark && styles.bottomNavDark]}>
               {navItems.map((item: any) => {
                 const Icon = item.icon;
                 const isActive =

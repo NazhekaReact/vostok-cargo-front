@@ -4,14 +4,15 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function CustomerDashboard() {
-  const { navigate, orders } = useContext(AppContext);
+  const { navigate, orders, isDark, language } = useContext(AppContext);
   const active = orders.find((o: any) => o.status === 'IN_TRANSIT');
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
-      <Text style={styles.screenTitle}>Мои заказы</Text>
+      <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('customer.myOrders', language)}</Text>
 
       {active && (
         <TouchableOpacity
@@ -27,7 +28,7 @@ export default function CustomerDashboard() {
           </View>
           <View style={styles.row}>
             <View style={styles.greenDot} />
-            <Text style={styles.darkCardText}>В пути</Text>
+            <Text style={styles.darkCardText}>{t('customer.inTransit', language)}</Text>
           </View>
         </TouchableOpacity>
       )}
@@ -44,7 +45,7 @@ export default function CustomerDashboard() {
                 style={[styles.btnBlue, styles.row, styles.justifyCenter]}
                 onPress={() => navigate('OrderDetails', { id: o._id })}
               >
-                <Text style={styles.btnTextWhite}>Перейти к заказу</Text>
+                <Text style={styles.btnTextWhite}>{t('customer.goToOrder', language)}</Text>
                 <ArrowRight size={16} color="white" style={styles.ml2} />
               </TouchableOpacity>
             }

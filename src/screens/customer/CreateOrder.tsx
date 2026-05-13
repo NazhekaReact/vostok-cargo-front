@@ -5,9 +5,10 @@ import { parseOrderRequest } from '../../api/ai';
 import { createOrderRequest } from '../../api/orders';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function CreateOrder() {
-  const { showToast, loadOrders, navigate, currentUserId } = useContext(AppContext);
+  const { showToast, loadOrders, navigate, currentUserId, isDark, language } = useContext(AppContext);
 
   const [tab, setTab] = useState('ai');
   const [aiText, setAiText] = useState(
@@ -107,47 +108,48 @@ export default function CreateOrder() {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
-      <Text style={styles.screenTitle}>Новый заказ</Text>
+      <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('create.title', language)}</Text>
 
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, isDark && styles.tabContainerDark]}>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === 'manual' && styles.tabBtnActive]}
+          style={[styles.tabBtn, tab === 'manual' && styles.tabBtnActive, tab === 'manual' && isDark && styles.tabBtnActiveDark]}
           onPress={() => setTab('manual')}
         >
-          <Text style={[styles.tabBtnText, tab === 'manual' && styles.tabBtnTextActive]}>
-            Вручную
+          <Text style={[styles.tabBtnText, tab === 'manual' && styles.tabBtnTextActive, isDark && { color: '#9ca3af' }, tab === 'manual' && isDark && styles.textWhite]}>
+            {t('create.manual', language)}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabBtn, tab === 'ai' && styles.tabBtnActive]}
+          style={[styles.tabBtn, tab === 'ai' && styles.tabBtnActive, tab === 'ai' && isDark && styles.tabBtnActiveDark]}
           onPress={() => setTab('ai')}
         >
           <Star size={16} color={tab === 'ai' ? '#3b82f6' : '#6b7280'} />
           <Text style={[styles.tabBtnText, tab === 'ai' && { color: '#3b82f6' }]}>
             {' '}
-            AI Помощник
+            {t('create.aiHelper', language)}
           </Text>
         </TouchableOpacity>
       </View>
 
       {tab === 'ai' && (
-        <View style={styles.aiBox}>
+        <View style={[styles.aiBox, isDark && styles.aiBoxDark]}>
           <View style={[styles.row, styles.mb2]}>
             <Star size={18} color="#2563eb" />
-            <Text style={styles.aiTitle}>Умное заполнение</Text>
+            <Text style={styles.aiTitle}>{t('create.smartFill', language)}</Text>
           </View>
 
           <Text style={styles.aiSubtitle}>
-            Просто опишите, что и куда нужно отвезти. ИИ сам заполнит форму.
+            {t('create.smartFillHint', language)}
           </Text>
 
           <TextInput
-            style={styles.aiInput}
+            style={[styles.aiInput, isDark && styles.inputDark]}
             value={aiText}
             onChangeText={setAiText}
             multiline
             textAlignVertical="top"
+            placeholderTextColor={isDark ? '#6b7280' : undefined}
           />
 
           <TouchableOpacity
@@ -156,7 +158,7 @@ export default function CreateOrder() {
             disabled={isParsing}
           >
             <Text style={styles.btnTextWhite}>
-              {isParsing ? 'Распознаю...' : 'Заполнить форму '}
+              {isParsing ? t('create.parsing', language) : t('create.fillForm', language)}
             </Text>
             <ArrowRight size={16} color="white" style={styles.ml1} />
           </TouchableOpacity>
@@ -166,59 +168,66 @@ export default function CreateOrder() {
       {tab === 'manual' && (
         <View>
           <View style={styles.mb6}>
-            <Text style={styles.sectionTitle}>Маршрут</Text>
+            <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('create.route', language)}</Text>
 
             <TextInput
-              style={styles.input}
-              placeholder="Город отправления"
+              style={[styles.input, isDark && styles.inputDark]}
+              placeholder={t('create.fromCity', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               value={fromCity}
               onChangeText={setFromCity}
             />
 
             <TextInput
-              style={styles.input}
-              placeholder="Адрес отправления"
+              style={[styles.input, isDark && styles.inputDark]}
+              placeholder={t('create.fromAddress', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               value={fromAddress}
               onChangeText={setFromAddress}
             />
 
             <TextInput
-              style={[styles.input, styles.mt3]}
-              placeholder="Город доставки"
+              style={[styles.input, styles.mt3, isDark && styles.inputDark]}
+              placeholder={t('create.toCity', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               value={toCity}
               onChangeText={setToCity}
             />
 
             <TextInput
-              style={styles.input}
-              placeholder="Адрес доставки"
+              style={[styles.input, isDark && styles.inputDark]}
+              placeholder={t('create.toAddress', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               value={toAddress}
               onChangeText={setToAddress}
             />
           </View>
 
           <View style={styles.mb6}>
-            <Text style={styles.sectionTitle}>Груз</Text>
+            <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('create.cargo', language)}</Text>
 
             <TextInput
-              style={styles.input}
-              placeholder="Описание груза"
+              style={[styles.input, isDark && styles.inputDark]}
+              placeholder={t('create.cargoDesc', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               value={cargoDescription}
               onChangeText={setCargoDescription}
             />
 
             <View style={[styles.row, styles.mt3]}>
               <TextInput
-                style={[styles.input, styles.flex1, styles.mr2]}
-                placeholder="Вес (кг)"
+                style={[styles.input, styles.flex1, styles.mr2, isDark && styles.inputDark]}
+                placeholder={t('create.weight', language)}
+                placeholderTextColor={isDark ? '#6b7280' : undefined}
                 keyboardType="numeric"
                 value={weight}
                 onChangeText={setWeight}
               />
 
               <TextInput
-                style={[styles.input, styles.flex1]}
-                placeholder="Объем (м³)"
+                style={[styles.input, styles.flex1, isDark && styles.inputDark]}
+                placeholder={t('create.volume', language)}
+                placeholderTextColor={isDark ? '#6b7280' : undefined}
                 keyboardType="numeric"
                 value={volume}
                 onChangeText={setVolume}
@@ -227,11 +236,12 @@ export default function CreateOrder() {
           </View>
 
           <View style={styles.mb6}>
-            <Text style={styles.sectionTitle}>Детали</Text>
+            <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('create.details', language)}</Text>
 
             <TextInput
-              style={styles.inputLarge}
-              placeholder="Предлагаемая цена"
+              style={[styles.inputLarge, isDark && styles.inputDark]}
+              placeholder={t('create.price', language)}
+              placeholderTextColor={isDark ? '#6b7280' : undefined}
               keyboardType="numeric"
               value={price}
               onChangeText={setPrice}
@@ -240,7 +250,7 @@ export default function CreateOrder() {
 
           <TouchableOpacity style={styles.btnBlueShadow} onPress={onCreateOrder}>
             <Text style={styles.btnTextWhiteLg}>
-              {isSubmitting ? 'Создание...' : 'Создать'}
+              {isSubmitting ? t('create.submitting', language) : t('create.submit', language)}
             </Text>
           </TouchableOpacity>
         </View>

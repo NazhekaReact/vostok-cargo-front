@@ -7,9 +7,10 @@ import BottomSheet from '../../components/BottomSheet';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
+import { t } from '../../utils/i18n';
 
 export default function LogisticianDashboard() {
-  const { navigate, orders, showToast, currentUserId, currentUser, loadOrders } = useContext(AppContext);
+  const { navigate, orders, showToast, currentUserId, currentUser, loadOrders, isDark, language } = useContext(AppContext);
   const [tab, setTab] = useState('search');
   const [bidOrder, setBidOrder] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState('25000');
@@ -113,30 +114,30 @@ export default function LogisticianDashboard() {
     <View style={styles.flex1}>
       <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
         <View style={[styles.row, styles.justifyBetween, styles.mb6]}>
-          <Text style={styles.screenTitleNoMargin}>Кабинет Логиста</Text>
+          <Text style={[styles.screenTitleNoMargin, isDark && styles.textWhite]}>{t('logist.title', language)}</Text>
           <TouchableOpacity style={styles.iconBtnBlue} onPress={() => navigate('Fleet')}>
             <Truck size={20} color="white" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tabContainer}>
+        <View style={[styles.tabContainer, isDark && styles.tabContainerDark]}>
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'search' && styles.tabBtnActive]}
+            style={[styles.tabBtn, tab === 'search' && styles.tabBtnActive, tab === 'search' && isDark && styles.tabBtnActiveDark]}
             onPress={() => setTab('search')}
           >
-            <Search size={16} color={tab === 'search' ? '#000' : '#6b7280'} />
-            <Text style={[styles.tabBtnText, tab === 'search' && styles.tabBtnTextActive]}>
-              Биржа
+            <Search size={16} color={tab === 'search' ? (isDark ? '#f9fafb' : '#000') : '#6b7280'} />
+            <Text style={[styles.tabBtnText, tab === 'search' && styles.tabBtnTextActive, isDark && { color: '#9ca3af' }, tab === 'search' && isDark && styles.textWhite]}>
+              {t('logist.exchange', language)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabBtn, tab === 'work' && styles.tabBtnActive]}
+            style={[styles.tabBtn, tab === 'work' && styles.tabBtnActive, tab === 'work' && isDark && styles.tabBtnActiveDark]}
             onPress={() => setTab('work')}
           >
-            <Briefcase size={16} color={tab === 'work' ? '#000' : '#6b7280'} />
-            <Text style={[styles.tabBtnText, tab === 'work' && styles.tabBtnTextActive]}>
-              В работе
+            <Briefcase size={16} color={tab === 'work' ? (isDark ? '#f9fafb' : '#000') : '#6b7280'} />
+            <Text style={[styles.tabBtnText, tab === 'work' && styles.tabBtnTextActive, isDark && { color: '#9ca3af' }, tab === 'work' && isDark && styles.textWhite]}>
+              {t('logist.inWork', language)}
             </Text>
           </TouchableOpacity>
         </View>
@@ -148,7 +149,7 @@ export default function LogisticianDashboard() {
               order={o}
               actionButton={
                 <TouchableOpacity style={styles.btnLightBlue} onPress={() => setBidOrder(o)}>
-                  <Text style={styles.btnLightBlueText}>Сделать ставку</Text>
+                  <Text style={styles.btnLightBlueText}>{t('logist.placeBid', language)}</Text>
                 </TouchableOpacity>
               }
             />
@@ -163,7 +164,7 @@ export default function LogisticianDashboard() {
               actionButton={
                 o.status === 'APPROVED' ? (
                   <TouchableOpacity style={styles.btnGreen} onPress={() => setAssignOrder(o)}>
-                    <Text style={styles.btnTextWhite}>Назначить машину</Text>
+                    <Text style={styles.btnTextWhite}>{t('logist.assignVehicle', language)}</Text>
                   </TouchableOpacity>
                 ) : null
               }
@@ -173,17 +174,19 @@ export default function LogisticianDashboard() {
 
       <BottomSheet visible={!!bidOrder} onClose={() => setBidOrder(null)}>
         <TextInput
-          style={styles.inputLarge}
+          style={[styles.inputLarge, isDark && styles.inputDark]}
           value={bidAmount}
           onChangeText={setBidAmount}
-          placeholder="Сумма"
+          placeholder={t('logist.amount', language)}
+          placeholderTextColor={isDark ? '#6b7280' : undefined}
           keyboardType="numeric"
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, isDark && styles.inputDark]}
           value={bidComment}
           onChangeText={setBidComment}
-          placeholder="Комментарий"
+          placeholder={t('logist.comment', language)}
+          placeholderTextColor={isDark ? '#6b7280' : undefined}
         />
         <View style={[styles.row, styles.mt4]}>
           <TouchableOpacity
@@ -192,15 +195,15 @@ export default function LogisticianDashboard() {
             disabled={isSubmitting}
           >
             <Text style={styles.btnTextWhite}>
-              {isSubmitting ? 'Отправка...' : 'Отправить'}
+              {isSubmitting ? t('logist.sending', language) : t('logist.send', language)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.btnGray, styles.flex1]}
+            style={[styles.btnGray, styles.flex1, isDark && styles.btnGrayDark]}
             onPress={() => setBidOrder(null)}
           >
-            <Text style={styles.btnTextBlack}>Отмена</Text>
+            <Text style={[styles.btnTextBlack, isDark && styles.textWhite]}>{t('logist.cancel', language)}</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
@@ -208,12 +211,12 @@ export default function LogisticianDashboard() {
       <BottomSheet
         visible={!!assignOrder}
         onClose={() => setAssignOrder(null)}
-        title="Назначение на рейс"
+        title={t('logist.assignTitle', language)}
         subtitle="Астана → Астана"
       >
-        <Text style={styles.inputLabel}>Выберите машину</Text>
+        <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('logist.selectVehicle', language)}</Text>
         <TouchableOpacity
-          style={styles.selectMock}
+          style={[styles.selectMock, isDark && styles.selectMockDark]}
           onPress={() => {
             if (vehicles.length < 2) return;
             const currentIndex = vehicles.findIndex((vehicle: any) => vehicle._id === selectedVehicleId);
@@ -222,16 +225,16 @@ export default function LogisticianDashboard() {
             setSelectedDriverId(nextVehicle?.currentDriver?._id || selectedDriverId);
           }}
         >
-          <Text style={styles.selectMockText}>
+          <Text style={[styles.selectMockText, isDark && styles.selectMockTextDark]}>
             {selectedVehicle
               ? `${selectedVehicle.brand} (${selectedVehicle.plateNumber})`
-              : 'Машин пока нет'}
+              : t('logist.noVehicles', language)}
           </Text>
           <ChevronDown size={20} color="#9ca3af" />
         </TouchableOpacity>
-        <Text style={[styles.inputLabel, styles.mt3]}>Выберите водителя</Text>
+        <Text style={[styles.inputLabel, styles.mt3, isDark && { color: '#9ca3af' }]}>{t('logist.selectDriver', language)}</Text>
         <TouchableOpacity
-          style={styles.selectMock}
+          style={[styles.selectMock, isDark && styles.selectMockDark]}
           onPress={() => {
             if (drivers.length < 2) return;
             const currentIndex = drivers.findIndex((driver: any) => driver._id === selectedDriverId);
@@ -239,8 +242,8 @@ export default function LogisticianDashboard() {
             setSelectedDriverId(nextDriver?._id || '');
           }}
         >
-          <Text style={styles.selectMockText}>
-            {selectedDriver ? selectedDriver.name : 'Водителей пока нет'}
+          <Text style={[styles.selectMockText, isDark && styles.selectMockTextDark]}>
+            {selectedDriver ? selectedDriver.name : t('logist.noDrivers', language)}
           </Text>
           <ChevronDown size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -250,7 +253,7 @@ export default function LogisticianDashboard() {
           disabled={isSubmitting}
         >
           <Text style={styles.btnTextWhite}>
-            {isSubmitting ? 'Назначаю...' : 'Назначить'}
+            {isSubmitting ? t('logist.assigning', language) : t('logist.assign', language)}
           </Text>
         </TouchableOpacity>
       </BottomSheet>

@@ -7,6 +7,7 @@ import Fleet from '../screens/logistician/Fleet';
 import LogisticianDashboard from '../screens/logistician/LogisticianDashboard';
 import LanguageSelector from '../screens/shared/LanguageSelector';
 import OrderDetails from '../screens/shared/OrderDetails';
+import Privacy from '../screens/shared/Privacy';
 import ProfileMenu from '../screens/shared/ProfileMenu';
 import Tracker from '../screens/shared/Tracker';
 import styles from '../styles/appStyles';
@@ -36,6 +37,9 @@ export function renderScreen(currentScreen: string, role: string) {
 
     case 'Language':
       return <LanguageSelector />;
+
+    case 'Privacy':
+      return <Privacy />;
 
     case 'Tracker':
       return <Tracker />;

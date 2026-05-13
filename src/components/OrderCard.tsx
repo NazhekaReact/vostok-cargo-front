@@ -7,12 +7,14 @@ import {
   Truck,
   Weight,
 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import AppContext from '../context/AppContext';
 import styles from '../styles/appStyles';
 
 export default function OrderCard({ order, onClick, actionButton }: any) {
   const [expanded, setExpanded] = useState(false);
+  const { isDark } = useContext(AppContext);
 
   const getStatus = (status: string) => {
     const map: Record<string, { label: string; bg: string; text: string }> = {
@@ -74,7 +76,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isDark && styles.cardDark]}
       activeOpacity={0.8}
       onPress={() => {
         if (onClick) onClick();
@@ -83,17 +85,17 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
     >
       <View style={styles.cardHeader}>
         <View style={styles.row}>
-          <View style={styles.iconBoxBlue}>
+          <View style={[styles.iconBoxBlue, isDark && styles.iconBoxBlueDark]}>
             <Box size={20} color="#3b82f6" />
           </View>
 
           <View style={styles.ml3}>
             <View style={styles.row}>
-              <Text style={styles.cardCityText}>
+              <Text style={[styles.cardCityText, isDark && styles.textWhite]}>
                 {order?.route?.from?.city || 'Не указано'}
               </Text>
               <ArrowRight size={14} color="#9ca3af" style={styles.mx1} />
-              <Text style={styles.cardCityText}>
+              <Text style={[styles.cardCityText, isDark && styles.textWhite]}>
                 {order?.route?.to?.city || 'Не указано'}
               </Text>
             </View>
@@ -114,12 +116,12 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
 
       {(expanded || actionButton) && (
         <View>
-          <View style={styles.detailsGrid}>
+          <View style={[styles.detailsGrid, isDark && styles.detailsGridDark]}>
             <View style={styles.detailsCol}>
               <Text style={styles.detailsLabel}>Груз</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Truck size={14} color="#60a5fa" />
-                <Text style={styles.detailsValue}> {cargoDescription}</Text>
+                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoDescription}</Text>
               </View>
             </View>
 
@@ -127,7 +129,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Вес</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Weight size={14} color="#60a5fa" />
-                <Text style={styles.detailsValue}> {cargoWeight} т</Text>
+                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoWeight} т</Text>
               </View>
             </View>
 
@@ -135,7 +137,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Объем</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Maximize2 size={14} color="#60a5fa" />
-                <Text style={styles.detailsValue}> {cargoVolume} м³</Text>
+                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoVolume} м³</Text>
               </View>
             </View>
 
@@ -143,7 +145,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Ставка</Text>
               <View style={[styles.row, styles.mt1]}>
                 <CircleDollarSign size={14} color="#60a5fa" />
-                <Text style={styles.detailsValue}>
+                <Text style={[styles.detailsValue, isDark && styles.textWhite]}>
                   {' '}
                   {price !== null ? `${price} ₽` : 'Договорная'}
                 </Text>

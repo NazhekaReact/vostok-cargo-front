@@ -735,6 +735,107 @@ const styles = StyleSheet.create({
 
   appContainer: { flex: 1, backgroundColor: '#f9fafb' },
   appContainerDark: { backgroundColor: '#111827' },
+
+  bottomNavDark: {
+    backgroundColor: 'rgba(17,24,39,0.95)',
+    borderTopColor: '#1f2937',
+  },
+
+  detailsGridDark: {
+    backgroundColor: '#1f2937',
+  },
+
+  inputDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+    color: '#f9fafb',
+  },
+
+  tabContainerDark: {
+    backgroundColor: '#1f2937',
+  },
+
+  tabBtnActiveDark: {
+    backgroundColor: '#374151',
+  },
+
+  authCardDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+
+  inputIconWrapDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+
+  inputIconDark: {
+    color: '#f9fafb',
+  },
+
+  btnGrayDark: {
+    backgroundColor: '#374151',
+  },
+
+  btnDangerDark: {
+    backgroundColor: '#7f1d1d',
+  },
+
+  btnDangerTextDark: {
+    color: '#fca5a5',
+  },
+
+  iconBoxBlueDark: {
+    backgroundColor: '#1e3a5f',
+  },
+
+  iconBoxGrayDark: {
+    backgroundColor: '#374151',
+  },
+
+  commentBoxDark: {
+    backgroundColor: '#1f2937',
+  },
+
+  aiBoxDark: {
+    borderColor: '#1e40af',
+    backgroundColor: '#1e3a5f',
+  },
+
+  selectMockDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+
+  selectMockTextDark: {
+    color: '#f9fafb',
+  },
+
+  bottomSheetContainerDark: {
+    backgroundColor: '#1f2937',
+  },
+
+  podBoxDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+
+  rolePillDark: {
+    backgroundColor: '#374151',
+    borderColor: '#4b5563',
+  },
+
+  rolePillTextDark: {
+    color: '#9ca3af',
+  },
+
+  plateTagDark: {
+    backgroundColor: '#374151',
+  },
+
+  idTagDark: {
+    backgroundColor: '#374151',
+  },
 });
 
 export default styles;
