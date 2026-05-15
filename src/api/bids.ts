@@ -9,3 +9,8 @@ export async function acceptBidRequest(orderId: string, bidId: string) {
   const { data } = await api.post(`/api/v1/orders/${orderId}/bids/${bidId}/accept`);
   return data;
 }
+
+export async function counterBidRequest(orderId: string, bidId: string, payload: any) {
+  const { data } = await api.post(`/api/v1/orders/${orderId}/bids/${bidId}/counter`, payload);
+  return data;
+}

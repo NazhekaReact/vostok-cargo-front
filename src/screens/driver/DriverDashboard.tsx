@@ -1,19 +1,92 @@
 import { Camera, CheckCircle2, MapPin, Navigation } from 'lucide-react-native';
-import React, { useContext, useState } from 'react';
-import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { Platform, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { updateDriverOrderStatusRequest } from '../../api/driver';
+import { saveLocationRequest } from '../../api/users';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
 
 export default function DriverDashboard() {
-  const { navigate, orders, showToast, loadOrders, gpsActive, saveCurrentLocation, isDark, language } = useContext(AppContext);
+  const { navigate, orders, showToast, loadOrders, gpsActive, saveCurrentLocation, isDark, language, currentUserId } = useContext(AppContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
   const activeOrder = orders.find((o: any) =>
     ['ASSIGNED', 'AT_PICKUP', 'IN_TRANSIT', 'AT_DROP'].includes(o.status)
   );
+
+  // Запрашиваем и стримим GPS
+  useEffect(() => {
+    if (!gpsActive) {
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+      return;
+    }
+
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          showToast('GPS разрешение не получено');
+          return;
+        }
+
+        // Получаем начальную позицию
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        setDriverLocation({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+
+        // Подписка на обновления каждые 10 сек / 50м
+        locationSubscription.current = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 10000,
+            distanceInterval: 50,
+          },
+          (location) => {
+            const newLoc = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            };
+            setDriverLocation(newLoc);
+
+            // Отправляем на сервер
+            if (currentUserId) {
+              saveLocationRequest({
+                userId: currentUserId,
+                location: {
+                  ...newLoc,
+                  heading: location.coords.heading,
+                  speed: location.coords.speed,
+                },
+              }).catch((err: any) => console.log('GPS save error:', err?.message));
+            }
+          }
+        );
+      } catch (err: any) {
+        console.log('GPS error:', err);
+        showToast('Ошибка GPS');
+      }
+    })();
+
+    return () => {
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+    };
+  }, [gpsActive, currentUserId]);
 
   const updateStatus = async (status: string, successMessage: string) => {
     if (!activeOrder?._id) return;
@@ -31,42 +104,76 @@ export default function DriverDashboard() {
     }
   };
 
+  const fromCoords = activeOrder?.route?.from?.coordinates;
+  const toCoords = activeOrder?.route?.to?.coordinates;
+
+  const mapRegion = driverLocation
+    ? { ...driverLocation, latitudeDelta: 0.5, longitudeDelta: 0.5 }
+    : { latitude: 51.1282, longitude: 71.4304, latitudeDelta: 5, longitudeDelta: 5 };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
       <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('driver.title', language)}</Text>
 
+      {/* GPS Toggle */}
       <View style={[styles.card, styles.row, styles.justifyBetween, styles.itemsCenter, isDark && styles.cardDark]}>
         <View style={styles.row}>
           <View style={[styles.iconBoxGray, isDark && styles.iconBoxGrayDark]}>
-            <Navigation size={20} color="#6b7280" />
+            <Navigation size={20} color={gpsActive ? '#22c55e' : '#6b7280'} />
           </View>
           <View style={styles.ml3}>
             <Text style={[styles.fontBold, isDark && styles.textWhite]}>{t('driver.gps', language)}</Text>
             <Text style={styles.textGrayXs}>
               {gpsActive ? t('driver.gpsActive', language) : t('driver.gpsOff', language)}
             </Text>
+            {driverLocation && gpsActive && (
+              <Text style={{ fontSize: 10, color: '#3b82f6', marginTop: 2 }}>
+                {driverLocation.latitude.toFixed(4)}, {driverLocation.longitude.toFixed(4)}
+              </Text>
+            )}
           </View>
         </View>
 
-        <View style={styles.row}>
-          {!gpsActive && (
-            <TouchableOpacity
-              style={styles.btnSmallBlue}
-              onPress={() => showToast('GPS Симуляция')}
-            >
-              <Text style={styles.btnSmallBlueText}>{t('driver.testGps', language)}</Text>
-            </TouchableOpacity>
-          )}
-
-          <View style={styles.ml2}>
-            <Switch
-              value={gpsActive}
-              onValueChange={saveCurrentLocation}
-              trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
-            />
-          </View>
-        </View>
+        <Switch
+          value={gpsActive}
+          onValueChange={saveCurrentLocation}
+          trackColor={{ false: '#d1d5db', true: '#22c55e' }}
+          thumbColor={gpsActive ? '#fff' : '#f4f4f5'}
+        />
       </View>
+
+      {/* Мини-карта водителя */}
+      {gpsActive && driverLocation && (
+        <View style={[styles.card, isDark && styles.cardDark, { padding: 0, overflow: 'hidden' }]}>
+          <View style={{ height: 180, borderRadius: 16, overflow: 'hidden' }}>
+            <MapView
+              style={{ flex: 1 }}
+              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+              region={mapRegion}
+              showsUserLocation
+              showsMyLocationButton={false}
+            >
+              {driverLocation && (
+                <Marker coordinate={driverLocation} title="Вы здесь" pinColor="#3b82f6" />
+              )}
+              {fromCoords?.lat && (
+                <Marker
+                  coordinate={{ latitude: fromCoords.lat, longitude: fromCoords.lng }}
+                  title="Погрузка"
+                  pinColor="#22c55e"
+                />
+              )}
+              {toCoords?.lat && (
+                <Marker
+                  coordinate={{ latitude: toCoords.lat, longitude: toCoords.lng }}
+                  title="Выгрузка"
+                  pinColor="#ef4444"
+                />
+              )}
+            </MapView>
+          </View>
+        </View>
+      )}
 
       <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('driver.currentTrip', language)}</Text>
 
@@ -85,7 +192,7 @@ export default function DriverDashboard() {
             >
               <MapPin size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? t('driver.updating', language) : t('driver.arrivedPickup', language)}
+                {isSubmitting ? t('driver.updating', language) : ` ${t('driver.arrivedPickup', language)}`}
               </Text>
             </TouchableOpacity>
           )}
@@ -98,7 +205,7 @@ export default function DriverDashboard() {
             >
               <Navigation size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? t('driver.updating', language) : t('driver.startTrip', language)}
+                {isSubmitting ? t('driver.updating', language) : ` ${t('driver.startTrip', language)}`}
               </Text>
             </TouchableOpacity>
           )}
@@ -111,7 +218,7 @@ export default function DriverDashboard() {
             >
               <MapPin size={18} color="white" />
               <Text style={styles.btnTextWhite}>
-                {isSubmitting ? t('driver.updating', language) : t('driver.arrivedDrop', language)}
+                {isSubmitting ? t('driver.updating', language) : ` ${t('driver.arrivedDrop', language)}`}
               </Text>
             </TouchableOpacity>
           )}

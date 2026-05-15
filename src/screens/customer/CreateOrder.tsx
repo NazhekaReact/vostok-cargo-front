@@ -1,8 +1,9 @@
-import { ArrowRight, Star } from 'lucide-react-native';
+import { ArrowRight, MapPin, Star } from 'lucide-react-native';
 import React, { useContext, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseOrderRequest } from '../../api/ai';
 import { createOrderRequest } from '../../api/orders';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
@@ -15,16 +16,20 @@ export default function CreateOrder() {
     'Нужно перевезти 5 тонн кирпича из Москвы в Тулу завтра. Бюджет 20000р.'
   );
 
-  const [fromCity, setFromCity] = useState('Москва');
-  const [fromAddress, setFromAddress] = useState('ул. Ленина, 10');
+  const [fromCity, setFromCity] = useState('');
+  const [fromAddress, setFromAddress] = useState('');
+  const [fromLat, setFromLat] = useState('');
+  const [fromLon, setFromLon] = useState('');
 
-  const [toCity, setToCity] = useState('Тула');
-  const [toAddress, setToAddress] = useState('ул. Центральная, 25');
+  const [toCity, setToCity] = useState('');
+  const [toAddress, setToAddress] = useState('');
+  const [toLat, setToLat] = useState('');
+  const [toLon, setToLon] = useState('');
 
-  const [cargoDescription, setCargoDescription] = useState('кирпич');
-  const [weight, setWeight] = useState('5000');
+  const [cargoDescription, setCargoDescription] = useState('');
+  const [weight, setWeight] = useState('');
   const [volume, setVolume] = useState('');
-  const [price, setPrice] = useState('20000');
+  const [price, setPrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
 
@@ -39,7 +44,9 @@ export default function CreateOrder() {
       setCargoDescription(parsedCargo.description || aiText);
       setWeight(String(parsedCargo.weight || ''));
       setVolume(String(parsedCargo.volume || ''));
+      setFromAddress(parsedRoute.from || '');
       setFromCity(parsedRoute.from || '');
+      setToAddress(parsedRoute.to || '');
       setToCity(parsedRoute.to || '');
       setPrice(String(estimatedPrice.max || estimatedPrice.min || ''));
 
@@ -54,6 +61,11 @@ export default function CreateOrder() {
   };
 
   const onCreateOrder = async () => {
+    if (!fromAddress.trim() || !toAddress.trim()) {
+      showToast('Выберите адреса из предложенных вариантов');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -68,10 +80,14 @@ export default function CreateOrder() {
           from: {
             city: fromCity.trim(),
             address: fromAddress.trim(),
+            lat: fromLat,
+            lon: fromLon,
           },
           to: {
             city: toCity.trim(),
             address: toAddress.trim(),
+            lat: toLat,
+            lon: toLon,
           },
         },
 
@@ -107,7 +123,11 @@ export default function CreateOrder() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.scrollPadding}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('create.title', language)}</Text>
 
       <View style={[styles.tabContainer, isDark && styles.tabContainerDark]}>
@@ -167,40 +187,80 @@ export default function CreateOrder() {
 
       {tab === 'manual' && (
         <View>
-          <View style={styles.mb6}>
+          <View style={[styles.mb6, { zIndex: 20 }]}>
             <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('create.route', language)}</Text>
 
-            <TextInput
-              style={[styles.input, isDark && styles.inputDark]}
-              placeholder={t('create.fromCity', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
-              value={fromCity}
-              onChangeText={setFromCity}
-            />
+            {/* ── Откуда (From) ── */}
+            <View style={[localStyles.addressGroup, isDark && localStyles.addressGroupDark]}>
+              <View style={localStyles.addressLabel}>
+                <View style={[localStyles.dot, { backgroundColor: '#22c55e' }]} />
+                <Text style={[localStyles.addressLabelText, isDark && styles.textWhite]}>
+                  {t('create.fromCity', language)}
+                </Text>
+              </View>
+              <View style={{ zIndex: 12 }}>
+                <AddressAutocomplete
+                  placeholder={`🔍 ${t('create.fromAddress', language)}`}
+                  value={fromAddress}
+                  onChangeText={(text) => {
+                    setFromAddress(text);
+                    setFromCity('');
+                    setFromLat('');
+                    setFromLon('');
+                  }}
+                  onSelect={(item) => {
+                    setFromAddress(item.displayName);
+                    setFromCity(item.city);
+                    setFromLat(item.lat);
+                    setFromLon(item.lon);
+                  }}
+                />
+              </View>
+              {fromCity ? (
+                <View style={localStyles.selectedTag}>
+                  <MapPin size={12} color="#22c55e" />
+                  <Text style={localStyles.selectedTagText}>
+                    {fromCity}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
 
-            <TextInput
-              style={[styles.input, isDark && styles.inputDark]}
-              placeholder={t('create.fromAddress', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
-              value={fromAddress}
-              onChangeText={setFromAddress}
-            />
-
-            <TextInput
-              style={[styles.input, styles.mt3, isDark && styles.inputDark]}
-              placeholder={t('create.toCity', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
-              value={toCity}
-              onChangeText={setToCity}
-            />
-
-            <TextInput
-              style={[styles.input, isDark && styles.inputDark]}
-              placeholder={t('create.toAddress', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
-              value={toAddress}
-              onChangeText={setToAddress}
-            />
+            {/* ── Куда (To) ── */}
+            <View style={[localStyles.addressGroup, isDark && localStyles.addressGroupDark, { zIndex: 9 }]}>
+              <View style={localStyles.addressLabel}>
+                <View style={[localStyles.dot, { backgroundColor: '#ef4444' }]} />
+                <Text style={[localStyles.addressLabelText, isDark && styles.textWhite]}>
+                  {t('create.toCity', language)}
+                </Text>
+              </View>
+              <View style={{ zIndex: 11 }}>
+                <AddressAutocomplete
+                  placeholder={`🔍 ${t('create.toAddress', language)}`}
+                  value={toAddress}
+                  onChangeText={(text) => {
+                    setToAddress(text);
+                    setToCity('');
+                    setToLat('');
+                    setToLon('');
+                  }}
+                  onSelect={(item) => {
+                    setToAddress(item.displayName);
+                    setToCity(item.city);
+                    setToLat(item.lat);
+                    setToLon(item.lon);
+                  }}
+                />
+              </View>
+              {toCity ? (
+                <View style={localStyles.selectedTag}>
+                  <MapPin size={12} color="#ef4444" />
+                  <Text style={localStyles.selectedTagText}>
+                    {toCity}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </View>
 
           <View style={styles.mb6}>
@@ -258,3 +318,58 @@ export default function CreateOrder() {
     </ScrollView>
   );
 }
+
+const localStyles = StyleSheet.create({
+  addressGroup: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  addressGroupDark: {
+    backgroundColor: '#1f2937',
+    borderColor: '#374151',
+  },
+  addressLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  addressLabelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  selectedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  selectedTagText: {
+    fontSize: 12,
+    color: '#16a34a',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+});
+

@@ -123,40 +123,34 @@ export default function Index() {
       return;
     }
 
-    const fallbackLocation = {
-      latitude: 51.1282,
-      longitude: 71.4304,
-    };
+    try {
+      const ExpoLocation = require('expo-location');
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        showToast('GPS разрешение не получено');
+        setGpsActive(false);
+        return;
+      }
 
-    const getBrowserLocation = () =>
-      new Promise<any>((resolve) => {
-        const geolocation = globalThis?.navigator?.geolocation;
-
-        if (!geolocation) {
-          resolve(fallbackLocation);
-          return;
-        }
-
-        geolocation.getCurrentPosition(
-          (position) =>
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            }),
-          () => resolve(fallbackLocation),
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
-        );
+      const loc = await ExpoLocation.getCurrentPositionAsync({
+        accuracy: ExpoLocation.Accuracy.High,
       });
 
-    try {
-      const location = await getBrowserLocation();
+      const location = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        heading: loc.coords.heading,
+        speed: loc.coords.speed,
+      };
+
       await saveLocationRequest({ userId: currentUserId, location });
       setGpsActive(true);
       showToast('GPS включен');
     } catch (error: any) {
       console.log('SAVE LOCATION ERROR:', error?.response?.data || error?.message || error);
       setGpsActive(false);
-      showToast('Бэк не сохранил GPS');
+      showToast('Ошибка GPS');
     }
   };
 

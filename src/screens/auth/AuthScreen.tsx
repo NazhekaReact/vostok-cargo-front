@@ -1,4 +1,4 @@
-import { Lock, Mail, User } from 'lucide-react-native';
+import { Lock, Mail, Phone, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { loginRequest, registerRequest } from '../../api/auth';
@@ -16,6 +16,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
   const [name, setName] = useState('Didar');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRegister = mode === 'register';
@@ -23,6 +24,11 @@ export default function AuthScreen({ onAuth, showToast }: any) {
   const submit = async () => {
     if (!email.trim() || !password.trim() || (isRegister && !name.trim())) {
       showToast('Заполните поля');
+      return;
+    }
+
+    if (isRegister && role === 'DRIVER' && !phone.trim()) {
+      showToast('Телефон обязателен для водителя');
       return;
     }
 
@@ -34,6 +40,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
             email: email.trim().toLowerCase(),
             password,
             role,
+            ...(phone.trim() ? { phone: phone.trim() } : {}),
           }
         : {
             email: email.trim().toLowerCase(),
@@ -122,6 +129,19 @@ export default function AuthScreen({ onAuth, showToast }: any) {
             secureTextEntry
           />
         </View>
+
+        {isRegister && role === 'DRIVER' && (
+          <View style={styles.inputIconWrap}>
+            <Phone size={18} color="#9ca3af" />
+            <TextInput
+              style={styles.inputIcon}
+              placeholder="Телефон"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+        )}
 
         {isRegister && (
           <View style={styles.mb4}>
