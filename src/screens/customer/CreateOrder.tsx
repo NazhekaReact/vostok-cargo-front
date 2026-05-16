@@ -1,4 +1,5 @@
 import { ArrowRight, MapPin, Star } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import React, { useContext, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parseOrderRequest } from '../../api/ai';
@@ -8,13 +9,84 @@ import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
 
+const toCoordinate = (value: string) => {
+  const parsed = Number(String(value).replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const getParsedPoint = (point: any) => {
+  if (typeof point === 'string') {
+    const text = point.trim();
+    return { address: text, city: text, lat: '', lon: '' };
+  }
+
+  const address =
+    point?.address ||
+    point?.displayName ||
+    point?.name ||
+    point?.city ||
+    '';
+  const city = point?.city || point?.town || point?.village || address;
+
+  return {
+    address,
+    city,
+    lat: String(point?.coordinates?.lat ?? point?.lat ?? point?.latitude ?? ''),
+    lon: String(
+      point?.coordinates?.lng ??
+        point?.coordinates?.lon ??
+        point?.lng ??
+        point?.lon ??
+        point?.longitude ??
+        ''
+    ),
+  };
+};
+
+const buildRoutePoint = (city: string, address: string, lat: string, lon: string) => {
+  const cleanAddress = address.trim();
+  const cleanCity = city.trim() || cleanAddress;
+  const latitude = toCoordinate(lat);
+  const longitude = toCoordinate(lon);
+
+  return {
+    city: cleanCity,
+    address: cleanAddress || cleanCity,
+    ...(latitude !== undefined && longitude !== undefined
+      ? { coordinates: { lat: latitude, lng: longitude } }
+      : {}),
+  };
+};
+
+const buildRoutePointWithFallback = async (city: string, address: string, lat: string, lon: string) => {
+  const existingPoint = buildRoutePoint(city, address, lat, lon);
+  if (existingPoint.coordinates) return existingPoint;
+
+  const query = [address.trim(), city.trim()].filter(Boolean).join(', ');
+  if (!query) return existingPoint;
+
+  try {
+    const [result] = await Location.geocodeAsync(query);
+    if (!result) return existingPoint;
+
+    return {
+      ...existingPoint,
+      coordinates: {
+        lat: result.latitude,
+        lng: result.longitude,
+      },
+    };
+  } catch (error) {
+    console.log('Create order geocode error:', error);
+    return existingPoint;
+  }
+};
+
 export default function CreateOrder() {
   const { showToast, loadOrders, navigate, currentUserId, isDark, language } = useContext(AppContext);
 
   const [tab, setTab] = useState('ai');
-  const [aiText, setAiText] = useState(
-    'Нужно перевезти 5 тонн кирпича из Москвы в Тулу завтра. Бюджет 20000р.'
-  );
+  const [aiText, setAiText] = useState('');
 
   const [fromCity, setFromCity] = useState('');
   const [fromAddress, setFromAddress] = useState('');
@@ -32,6 +104,9 @@ export default function CreateOrder() {
   const [price, setPrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [focusedAddress, setFocusedAddress] = useState<'from' | 'to' | null>(null);
+  const [autoSelectParsedFrom, setAutoSelectParsedFrom] = useState(false);
+  const [autoSelectParsedTo, setAutoSelectParsedTo] = useState(false);
 
   const onParseOrder = async () => {
     try {
@@ -40,15 +115,23 @@ export default function CreateOrder() {
       const parsedCargo = data?.cargo || {};
       const parsedRoute = data?.route || {};
       const estimatedPrice = data?.estimatedPrice || {};
+      const parsedFrom = getParsedPoint(parsedRoute.from);
+      const parsedTo = getParsedPoint(parsedRoute.to);
 
       setCargoDescription(parsedCargo.description || aiText);
       setWeight(String(parsedCargo.weight || ''));
       setVolume(String(parsedCargo.volume || ''));
-      setFromAddress(parsedRoute.from || '');
-      setFromCity(parsedRoute.from || '');
-      setToAddress(parsedRoute.to || '');
-      setToCity(parsedRoute.to || '');
+      setFromAddress(parsedFrom.address);
+      setFromCity(parsedFrom.city);
+      setFromLat(parsedFrom.lat);
+      setFromLon(parsedFrom.lon);
+      setToAddress(parsedTo.address);
+      setToCity(parsedTo.city);
+      setToLat(parsedTo.lat);
+      setToLon(parsedTo.lon);
       setPrice(String(estimatedPrice.max || estimatedPrice.min || ''));
+      setAutoSelectParsedFrom(!parsedFrom.lat || !parsedFrom.lon);
+      setAutoSelectParsedTo(!parsedTo.lat || !parsedTo.lon);
 
       showToast('Данные распознаны');
       setTab('manual');
@@ -62,7 +145,7 @@ export default function CreateOrder() {
 
   const onCreateOrder = async () => {
     if (!fromAddress.trim() || !toAddress.trim()) {
-      showToast('Выберите адреса из предложенных вариантов');
+      showToast('Укажите адреса маршрута');
       return;
     }
 
@@ -77,18 +160,8 @@ export default function CreateOrder() {
 
       const payload = {
         route: {
-          from: {
-            city: fromCity.trim(),
-            address: fromAddress.trim(),
-            lat: fromLat,
-            lon: fromLon,
-          },
-          to: {
-            city: toCity.trim(),
-            address: toAddress.trim(),
-            lat: toLat,
-            lon: toLon,
-          },
+          from: await buildRoutePointWithFallback(fromCity, fromAddress, fromLat, fromLon),
+          to: await buildRoutePointWithFallback(toCity, toAddress, toLat, toLon),
         },
 
         // для новой структуры фронта
@@ -169,7 +242,8 @@ export default function CreateOrder() {
             onChangeText={setAiText}
             multiline
             textAlignVertical="top"
-            placeholderTextColor={isDark ? '#6b7280' : undefined}
+            placeholder={t('create.aiPlaceholder', language)}
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
           />
 
           <TouchableOpacity
@@ -191,7 +265,13 @@ export default function CreateOrder() {
             <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>{t('create.route', language)}</Text>
 
             {/* ── Откуда (From) ── */}
-            <View style={[localStyles.addressGroup, isDark && localStyles.addressGroupDark]}>
+            <View
+              style={[
+                localStyles.addressGroup,
+                focusedAddress === 'from' && localStyles.addressGroupFocused,
+                isDark && localStyles.addressGroupDark,
+              ]}
+            >
               <View style={localStyles.addressLabel}>
                 <View style={[localStyles.dot, { backgroundColor: '#22c55e' }]} />
                 <Text style={[localStyles.addressLabelText, isDark && styles.textWhite]}>
@@ -208,11 +288,14 @@ export default function CreateOrder() {
                     setFromLat('');
                     setFromLon('');
                   }}
+                  autoSelectOnValueChange={autoSelectParsedFrom && !fromLat && !fromLon}
+                  onFocusChange={(focused) => setFocusedAddress(focused ? 'from' : null)}
                   onSelect={(item) => {
                     setFromAddress(item.displayName);
                     setFromCity(item.city);
                     setFromLat(item.lat);
                     setFromLon(item.lon);
+                    setAutoSelectParsedFrom(false);
                   }}
                 />
               </View>
@@ -227,7 +310,13 @@ export default function CreateOrder() {
             </View>
 
             {/* ── Куда (To) ── */}
-            <View style={[localStyles.addressGroup, isDark && localStyles.addressGroupDark, { zIndex: 9 }]}>
+            <View
+              style={[
+                localStyles.addressGroup,
+                focusedAddress === 'to' && localStyles.addressGroupFocused,
+                isDark && localStyles.addressGroupDark,
+              ]}
+            >
               <View style={localStyles.addressLabel}>
                 <View style={[localStyles.dot, { backgroundColor: '#ef4444' }]} />
                 <Text style={[localStyles.addressLabelText, isDark && styles.textWhite]}>
@@ -244,11 +333,14 @@ export default function CreateOrder() {
                     setToLat('');
                     setToLon('');
                   }}
+                  autoSelectOnValueChange={autoSelectParsedTo && !toLat && !toLon}
+                  onFocusChange={(focused) => setFocusedAddress(focused ? 'to' : null)}
                   onSelect={(item) => {
                     setToAddress(item.displayName);
                     setToCity(item.city);
                     setToLat(item.lat);
                     setToLon(item.lon);
+                    setAutoSelectParsedTo(false);
                   }}
                 />
               </View>
@@ -269,7 +361,7 @@ export default function CreateOrder() {
             <TextInput
               style={[styles.input, isDark && styles.inputDark]}
               placeholder={t('create.cargoDesc', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
+              placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
               value={cargoDescription}
               onChangeText={setCargoDescription}
             />
@@ -278,7 +370,7 @@ export default function CreateOrder() {
               <TextInput
                 style={[styles.input, styles.flex1, styles.mr2, isDark && styles.inputDark]}
                 placeholder={t('create.weight', language)}
-                placeholderTextColor={isDark ? '#6b7280' : undefined}
+                placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
                 keyboardType="numeric"
                 value={weight}
                 onChangeText={setWeight}
@@ -287,7 +379,7 @@ export default function CreateOrder() {
               <TextInput
                 style={[styles.input, styles.flex1, isDark && styles.inputDark]}
                 placeholder={t('create.volume', language)}
-                placeholderTextColor={isDark ? '#6b7280' : undefined}
+                placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
                 keyboardType="numeric"
                 value={volume}
                 onChangeText={setVolume}
@@ -301,7 +393,7 @@ export default function CreateOrder() {
             <TextInput
               style={[styles.inputLarge, isDark && styles.inputDark]}
               placeholder={t('create.price', language)}
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
+              placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
               keyboardType="numeric"
               value={price}
               onChangeText={setPrice}
@@ -332,6 +424,11 @@ const localStyles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
+    zIndex: 1,
+  },
+  addressGroupFocused: {
+    zIndex: 1000,
+    elevation: 12,
   },
   addressGroupDark: {
     backgroundColor: '#1f2937',
@@ -372,4 +469,3 @@ const localStyles = StyleSheet.create({
     marginLeft: 4,
   },
 });
-

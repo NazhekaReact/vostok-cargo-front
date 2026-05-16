@@ -28,12 +28,12 @@ export default function Fleet() {
   const [addDriverModal, setAddDriverModal] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const [brand, setBrand] = useState('Volvo FH');
-  const [plateNumber, setPlateNumber] = useState('A 777 AA 777');
+  const [brand, setBrand] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
   const [vehicleType, setVehicleType] = useState('TRUCK_20T');
-  const [weight, setWeight] = useState('20000');
-  const [volume, setVolume] = useState('82');
-  const [telegramId, setTelegramId] = useState('706284378');
+  const [weight, setWeight] = useState('');
+  const [volume, setVolume] = useState('');
+  const [telegramId, setTelegramId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadFleet = useCallback(async () => {
@@ -91,7 +91,7 @@ export default function Fleet() {
       setIsSubmitting(true);
       await addDriverRequest({
         logisticianId: currentUserId,
-        telegramId: telegramId.trim(),
+        driverIdentifier: telegramId.trim(),
       });
       showToast('Водитель добавлен');
       setAddDriverModal(false);
@@ -266,13 +266,13 @@ export default function Fleet() {
         title={t('fleet.addVehicle', language)}
       >
         <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.brand', language)}</Text>
-        <TextInput style={[styles.input, isDark && styles.inputDark]} placeholder="Volvo FH" placeholderTextColor={isDark ? '#6b7280' : undefined} value={brand} onChangeText={setBrand} />
+        <TextInput style={[styles.input, isDark && styles.inputDark]} placeholder="Volvo FH" placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'} value={brand} onChangeText={setBrand} />
 
         <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('fleet.plateNumber', language)}</Text>
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           placeholder="A 777 AA 777"
-          placeholderTextColor={isDark ? '#6b7280' : undefined}
+          placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
           value={plateNumber}
           onChangeText={setPlateNumber}
         />
@@ -296,7 +296,8 @@ export default function Fleet() {
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
+              placeholder="20000"
+              placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
             />
           </View>
           <View style={styles.flex1}>
@@ -306,7 +307,8 @@ export default function Fleet() {
               value={volume}
               onChangeText={setVolume}
               keyboardType="numeric"
-              placeholderTextColor={isDark ? '#6b7280' : undefined}
+              placeholder="82"
+              placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
             />
           </View>
         </View>
@@ -330,8 +332,8 @@ export default function Fleet() {
         <View style={styles.row}>
           <TextInput
             style={[styles.input, styles.flex1, styles.mr2, styles.mb0, isDark && styles.inputDark]}
-            placeholder="Telegram ID"
-            placeholderTextColor={isDark ? '#6b7280' : undefined}
+            placeholder={t('fleet.driverIdentifier', language)}
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
             value={telegramId}
             onChangeText={setTelegramId}
           />

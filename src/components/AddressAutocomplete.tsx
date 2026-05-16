@@ -34,6 +34,8 @@ interface AddressAutocompleteProps {
   value: string;
   onSelect: (item: { displayName: string; city: string; lat: string; lon: string }) => void;
   onChangeText?: (text: string) => void;
+  autoSelectOnValueChange?: boolean;
+  onFocusChange?: (focused: boolean) => void;
   style?: any;
 }
 
@@ -44,6 +46,8 @@ export default function AddressAutocomplete({
   value,
   onSelect,
   onChangeText,
+  autoSelectOnValueChange = false,
+  onFocusChange,
   style,
 }: AddressAutocompleteProps) {
   const { isDark } = useContext(AppContext);
@@ -55,18 +59,36 @@ export default function AddressAutocomplete({
   const [isSelected, setIsSelected] = useState(!!value);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoSelectedValueRef = useRef('');
+
+  const normalizeResult = (item: NominatimResult) => {
+    const city =
+      item.address?.city ||
+      item.address?.town ||
+      item.address?.village ||
+      item.address?.state ||
+      item.display_name.split(',')[0] ||
+      '';
+
+    return {
+      displayName: item.display_name,
+      city,
+      lat: item.lat,
+      lon: item.lon,
+    };
+  };
 
   // Sync external value changes (e.g. from AI parsing)
   useEffect(() => {
     setQuery(value);
-    if (value) setIsSelected(true);
+    setIsSelected(!!value);
   }, [value]);
 
-  const searchAddress = useCallback(async (text: string) => {
+  const searchAddress = useCallback(async (text: string, options?: { autoSelectFirst?: boolean }) => {
     if (text.length < 3) {
       setResults([]);
       setShowDropdown(false);
-      return;
+      return null;
     }
 
     setIsLoading(true);
@@ -87,18 +109,44 @@ export default function AddressAutocomplete({
 
       if (!response.ok) throw new Error('Nominatim error');
       const data: NominatimResult[] = await response.json();
+      const firstResult = data[0];
+
+      if (options?.autoSelectFirst && firstResult) {
+        const normalized = normalizeResult(firstResult);
+        setQuery(normalized.displayName);
+        setIsSelected(true);
+        setResults([]);
+        setShowDropdown(false);
+        onSelect(normalized);
+        return firstResult;
+      }
+
       setResults(data);
       setShowDropdown(data.length > 0);
+      return firstResult || null;
     } catch (err) {
       console.log('Nominatim search error:', err);
       setResults([]);
       setShowDropdown(false);
+      return null;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onSelect]);
+
+  useEffect(() => {
+    if (!autoSelectOnValueChange || !value || isSelected) return;
+    if (lastAutoSelectedValueRef.current === value) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      lastAutoSelectedValueRef.current = value;
+      searchAddress(value, { autoSelectFirst: true });
+    }, 250);
+  }, [autoSelectOnValueChange, isSelected, searchAddress, value]);
 
   const handleChangeText = (text: string) => {
+    lastAutoSelectedValueRef.current = text;
     setQuery(text);
     setIsSelected(false);
     onChangeText?.(text);
@@ -110,26 +158,16 @@ export default function AddressAutocomplete({
   };
 
   const handleSelect = (item: NominatimResult) => {
-    const city =
-      item.address?.city ||
-      item.address?.town ||
-      item.address?.village ||
-      '';
+    const normalized = normalizeResult(item);
 
-    const displayName = item.display_name;
-
-    setQuery(displayName);
+    setQuery(normalized.displayName);
     setIsSelected(true);
     setShowDropdown(false);
     setResults([]);
     Keyboard.dismiss();
 
-    onSelect({
-      displayName,
-      city,
-      lat: item.lat,
-      lon: item.lon,
-    });
+    onFocusChange?.(false);
+    onSelect(normalized);
   };
 
   const handleClear = () => {
@@ -154,6 +192,7 @@ export default function AddressAutocomplete({
       item.address?.city ||
       item.address?.town ||
       item.address?.village ||
+      item.address?.state ||
       '';
 
     return (
@@ -215,9 +254,13 @@ export default function AddressAutocomplete({
           value={query}
           onChangeText={handleChangeText}
           onFocus={() => {
+            onFocusChange?.(true);
             if (results.length > 0 && !isSelected) {
               setShowDropdown(true);
             }
+          }}
+          onBlur={() => {
+            setTimeout(() => onFocusChange?.(false), 180);
           }}
         />
         {isLoading && (
@@ -263,13 +306,13 @@ export default function AddressAutocomplete({
 const localStyles = StyleSheet.create({
   container: {
     position: 'relative',
-    zIndex: 10,
+    zIndex: 100,
     marginBottom: 12,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
@@ -317,6 +360,7 @@ const localStyles = StyleSheet.create({
     borderColor: '#3b82f6',
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
+    zIndex: 10000,
     maxHeight: 260,
     ...Platform.select({
       ios: {

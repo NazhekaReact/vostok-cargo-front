@@ -16,6 +16,11 @@ const translations: Record<string, Record<string, string>> = {
   'auth.role.logistician': { ru: 'Логист', en: 'Logistician', kk: 'Логист' },
   'auth.role.driver': { ru: 'Водитель', en: 'Driver', kk: 'Жүргізуші' },
 
+  // ======== Common ========
+  'common.back': { ru: 'Назад', en: 'Back', kk: 'Артқа' },
+  'common.next': { ru: 'Далее', en: 'Next', kk: 'Келесі' },
+  'common.save': { ru: 'Сохранить', en: 'Save', kk: 'Сақтау' },
+
   // ======== Nav ========
   'nav.home': { ru: 'Главная', en: 'Home', kk: 'Басты' },
   'nav.fleet': { ru: 'Машины', en: 'Fleet', kk: 'Көліктер' },
@@ -34,6 +39,7 @@ const translations: Record<string, Record<string, string>> = {
   'create.aiHelper': { ru: 'AI Помощник', en: 'AI Helper', kk: 'AI Көмекші' },
   'create.smartFill': { ru: 'Умное заполнение', en: 'Smart Fill', kk: 'Ақылды толтыру' },
   'create.smartFillHint': { ru: 'Просто опишите, что и куда нужно отвезти. ИИ сам заполнит форму.', en: 'Just describe what needs to be delivered and where. AI will fill the form.', kk: 'Нені қайда жеткізу керектігін сипаттаңыз. AI формаларды толтырады.' },
+  'create.aiPlaceholder': { ru: 'Например: нужно перевезти 5 тонн кирпича из Алматы в Астану завтра, бюджет 200000 ₸', en: 'Example: deliver 5 tons of bricks from Almaty to Astana tomorrow, budget 200000 ₸', kk: 'Мысалы: Алматыдан Астанаға ертең 5 тонна кірпіш жеткізу, бюджет 200000 ₸' },
   'create.fillForm': { ru: 'Заполнить форму ', en: 'Fill Form ', kk: 'Форманы толтыру ' },
   'create.parsing': { ru: 'Распознаю...', en: 'Parsing...', kk: 'Талдау...' },
   'create.route': { ru: 'Маршрут', en: 'Route', kk: 'Маршрут' },
@@ -70,8 +76,13 @@ const translations: Record<string, Record<string, string>> = {
   'order.unknown': { ru: 'Неизвестно', en: 'Unknown', kk: 'Белгісіз' },
 
   // ======== Profile Menu ========
+  'menu.name': { ru: 'Имя', en: 'Name', kk: 'Аты' },
   'menu.yourCompany': { ru: 'Ваша компания', en: 'Your Company', kk: 'Сіздің компания' },
   'menu.changeCompany': { ru: 'Изменить компанию ', en: 'Change Company ', kk: 'Компанияны өзгерту ' },
+  'menu.addCompany': { ru: 'Добавить компанию', en: 'Add company', kk: 'Компания қосу' },
+  'menu.companyName': { ru: 'Название компании', en: 'Company name', kk: 'Компания атауы' },
+  'menu.saveCompany': { ru: 'Сохранить компанию', en: 'Save company', kk: 'Компанияны сақтау' },
+  'menu.saving': { ru: 'Сохраняю...', en: 'Saving...', kk: 'Сақталуда...' },
   'menu.geolocation': { ru: 'Геопозиция', en: 'Geolocation', kk: 'Геолокация' },
   'menu.settings': { ru: 'Настройки', en: 'Settings', kk: 'Баптаулар' },
   'menu.privacy': { ru: 'Конфиденциальность', en: 'Privacy', kk: 'Құпиялық' },
@@ -79,6 +90,25 @@ const translations: Record<string, Record<string, string>> = {
   'menu.darkTheme': { ru: 'Тёмная тема', en: 'Dark Theme', kk: 'Қараңғы тақырып' },
   'menu.logout': { ru: 'Выйти', en: 'Sign Out', kk: 'Шығу' },
   'menu.yourId': { ru: 'Ваш ID:', en: 'Your ID:', kk: 'Сіздің ID:' },
+
+  // ======== Company ========
+  'company.name': { ru: 'Название компании', en: 'Company name', kk: 'Компания атауы' },
+  'company.inn': { ru: 'ИНН', en: 'Tax ID', kk: 'СТН' },
+  'company.ogrn': { ru: 'ОГРН', en: 'Registration number', kk: 'Тіркеу нөмірі' },
+  'company.profile': { ru: 'Профиль компании', en: 'Company profile', kk: 'Компания профилі' },
+  'company.country': { ru: 'Страна', en: 'Country', kk: 'Ел' },
+  'company.city': { ru: 'Город', en: 'City', kk: 'Қала' },
+  'company.email': { ru: 'Email компании', en: 'Company email', kk: 'Компания email' },
+  'company.website': { ru: 'Сайт', en: 'Website', kk: 'Сайт' },
+  'company.manager': { ru: 'Ответственный', en: 'Manager', kk: 'Жауапты адам' },
+  'company.phone': { ru: 'Телефон компании', en: 'Company phone', kk: 'Компания телефоны' },
+  'company.jobTitle': { ru: 'Должность', en: 'Job title', kk: 'Лауазым' },
+  'company.department': { ru: 'Отдел', en: 'Department', kk: 'Бөлім' },
+  'company.empty': { ru: 'Компания не добавлена', en: 'No company added', kk: 'Компания қосылмаған' },
+  'company.noName': { ru: 'Без названия', en: 'Untitled', kk: 'Атаусыз' },
+  'company.stepBase': { ru: 'Основные данные', en: 'Basic details', kk: 'Негізгі деректер' },
+  'company.stepContacts': { ru: 'Контакты и адрес', en: 'Contacts and address', kk: 'Байланыс және мекенжай' },
+  'company.stepTeam': { ru: 'Ответственные', en: 'Responsible team', kk: 'Жауаптылар' },
 
   // ======== Language Selector ========
   'lang.title': { ru: 'Выберите язык', en: 'Select Language', kk: 'Тілді таңдаңыз' },
@@ -91,6 +121,9 @@ const translations: Record<string, Record<string, string>> = {
   'driver.testGps': { ru: 'Тест GPS', en: 'Test GPS', kk: 'GPS Тест' },
   'driver.currentTrip': { ru: 'Текущий рейс', en: 'Current Trip', kk: 'Ағымдағы рейс' },
   'driver.noTrip': { ru: 'Нет активного рейса', en: 'No active trip', kk: 'Белсенді рейс жоқ' },
+  'driver.routeToPickup': { ru: 'Маршрут в 2GIS до погрузки', en: 'Route to pickup in 2GIS', kk: '2GIS-пен тиеуге дейін маршрут' },
+  'driver.routeToDrop': { ru: 'Маршрут в 2GIS до выгрузки', en: 'Route to drop-off in 2GIS', kk: '2GIS-пен түсіруге дейін маршрут' },
+  'driver.routeUnavailable': { ru: 'Не удалось открыть маршрут', en: 'Could not open route', kk: 'Маршрутты ашу мүмкін болмады' },
   'driver.arrivedPickup': { ru: 'Прибыл на погрузку', en: 'Arrived at Pickup', kk: 'Тиеуге жеттім' },
   'driver.startTrip': { ru: 'Начать рейс', en: 'Start Trip', kk: 'Рейсті бастау' },
   'driver.arrivedDrop': { ru: 'Прибыл на выгрузку', en: 'Arrived at Drop', kk: 'Түсіруге жеттім' },
@@ -138,6 +171,7 @@ const translations: Record<string, Record<string, string>> = {
   'fleet.save': { ru: 'Сохранить', en: 'Save', kk: 'Сақтау' },
   'fleet.saving': { ru: 'Сохраняю...', en: 'Saving...', kk: 'Сақталуда...' },
   'fleet.addDriver': { ru: 'Добавить водителя', en: 'Add Driver', kk: 'Жүргізуші қосу' },
+  'fleet.driverIdentifier': { ru: 'Телефон или email водителя', en: 'Driver phone or email', kk: 'Жүргізушінің телефоны немесе email' },
   'fleet.add': { ru: 'Добавить', en: 'Add', kk: 'Қосу' },
   'fleet.adding': { ru: 'Добавляю...', en: 'Adding...', kk: 'Қосылуда...' },
   'fleet.truck20': { ru: 'Фура 20т', en: 'Truck 20t', kk: 'Фура 20т' },

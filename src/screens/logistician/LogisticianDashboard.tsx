@@ -1,6 +1,6 @@
 import { Briefcase, ChevronDown, Search, Truck } from 'lucide-react-native';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { placeBidRequest } from '../../api/bids';
 import { assignOrderRequest, getDriversRequest, getVehiclesRequest } from '../../api/fleet';
 import BottomSheet from '../../components/BottomSheet';
@@ -8,13 +8,36 @@ import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
+import { getRouteLabel } from '../../utils/orderData';
+
+const getEntityId = (value: any) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value._id || value.id || '';
+};
+
+const getAcceptedBidLogisticianId = (order: any) => {
+  const acceptedBid = order?.bids?.find((bid: any) => bid.status === 'ACCEPTED');
+  return getEntityId(acceptedBid?.logistician);
+};
+
+const getOrderLogisticianId = (order: any) =>
+  getEntityId(order?.executor?.logistician) || getAcceptedBidLogisticianId(order);
+
+const isOpenForExchange = (order: any) =>
+  ['PUBLISHED', 'NEGOTIATION'].includes(order?.status) && !getOrderLogisticianId(order);
+
+const isMyWorkOrder = (order: any, logisticianId?: string) =>
+  Boolean(logisticianId) &&
+  getOrderLogisticianId(order) === logisticianId &&
+  !['PUBLISHED', 'NEGOTIATION', 'DELIVERED'].includes(order?.status);
 
 export default function LogisticianDashboard() {
-  const { navigate, orders, showToast, currentUserId, currentUser, loadOrders, isDark, language } = useContext(AppContext);
+  const { navigate, orders, showToast, currentUserId, currentUser, loadOrders, loadingOrders, isDark, language } = useContext(AppContext);
   const [tab, setTab] = useState('search');
   const [bidOrder, setBidOrder] = useState<any>(null);
-  const [bidAmount, setBidAmount] = useState('25000');
-  const [bidComment, setBidComment] = useState('бензин подорожал');
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidComment, setBidComment] = useState('');
   const [assignOrder, setAssignOrder] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -22,13 +45,9 @@ export default function LogisticianDashboard() {
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const searchOrders = orders.filter((o: any) =>
-    ['PUBLISHED', 'NEGOTIATION'].includes(o.status)
-  );
+  const searchOrders = orders.filter(isOpenForExchange);
 
-  const workOrders = orders.filter(
-    (o: any) => !['PUBLISHED', 'NEGOTIATION', 'DELIVERED'].includes(o.status)
-  );
+  const workOrders = orders.filter((order: any) => isMyWorkOrder(order, currentUserId));
 
   const selectedVehicle = vehicles.find((vehicle: any) => vehicle._id === selectedVehicleId);
   const selectedDriver = drivers.find((driver: any) => driver._id === selectedDriverId);
@@ -52,6 +71,13 @@ export default function LogisticianDashboard() {
       console.log('loadFleet error:', error?.response?.data || error?.message);
     }
   }, [currentUserId]);
+
+  const refreshDashboard = useCallback(async () => {
+    await Promise.all([
+      loadOrders?.(),
+      loadFleet(),
+    ]);
+  }, [loadFleet, loadOrders]);
 
   const onPlaceBid = async () => {
     if (!bidOrder?._id) {
@@ -112,7 +138,18 @@ export default function LogisticianDashboard() {
 
   return (
     <View style={styles.flex1}>
-      <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollPadding}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={Boolean(loadingOrders)}
+            onRefresh={refreshDashboard}
+            tintColor="#3b82f6"
+            colors={['#3b82f6']}
+          />
+        }
+      >
         <View style={[styles.row, styles.justifyBetween, styles.mb6]}>
           <Text style={[styles.screenTitleNoMargin, isDark && styles.textWhite]}>{t('logist.title', language)}</Text>
           <TouchableOpacity style={styles.iconBtnBlue} onPress={() => navigate('Fleet')}>
@@ -178,7 +215,7 @@ export default function LogisticianDashboard() {
           value={bidAmount}
           onChangeText={setBidAmount}
           placeholder={t('logist.amount', language)}
-          placeholderTextColor={isDark ? '#6b7280' : undefined}
+          placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
           keyboardType="numeric"
         />
         <TextInput
@@ -186,7 +223,7 @@ export default function LogisticianDashboard() {
           value={bidComment}
           onChangeText={setBidComment}
           placeholder={t('logist.comment', language)}
-          placeholderTextColor={isDark ? '#6b7280' : undefined}
+          placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
         />
         <View style={[styles.row, styles.mt4]}>
           <TouchableOpacity
@@ -212,7 +249,11 @@ export default function LogisticianDashboard() {
         visible={!!assignOrder}
         onClose={() => setAssignOrder(null)}
         title={t('logist.assignTitle', language)}
-        subtitle="Астана → Астана"
+        subtitle={
+          assignOrder
+            ? `${getRouteLabel(assignOrder, 'from', '—')} → ${getRouteLabel(assignOrder, 'to', '—')}`
+            : undefined
+        }
       >
         <Text style={[styles.inputLabel, isDark && { color: '#9ca3af' }]}>{t('logist.selectVehicle', language)}</Text>
         <TouchableOpacity

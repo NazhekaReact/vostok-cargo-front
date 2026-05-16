@@ -2,21 +2,33 @@ import {
     ArrowRight,
     Calendar,
     ChevronLeft,
+    LocateFixed,
     MessageSquare,
     Navigation,
     Send,
     User,
 } from 'lucide-react-native';
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Dimensions, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from '../../components/MapViewCompat';
 import { acceptBidRequest, counterBidRequest } from '../../api/bids';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
+import {
+  Coordinate,
+  buildMapRegion,
+  focusMapOnCoordinate,
+  getLocationCoordinate,
+  getPointCoordinate,
+  resolvePointCoordinate,
+} from '../../utils/mapUtils';
+import { openRouteIn2gis } from '../../utils/navigation';
+import { getOrderCargo, getOrderPrice, getRouteLabel, getRoutePoint } from '../../utils/orderData';
 
 export default function OrderDetails() {
-  const { navigate, orders, role, showToast, params, loadOrders, isDark, language, currentUserId } = useContext(AppContext);
+  const { navigate, orders, role, showToast, params, loadOrders, isDark, language } = useContext(AppContext);
   const order =
     orders.find((o: any) => o._id === params?.id) ||
     orders.find((o: any) => o.status === 'IN_TRANSIT') ||
@@ -26,24 +38,97 @@ export default function OrderDetails() {
   const [counterComment, setCounterComment] = useState('');
   const [counterBidId, setCounterBidId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const mapRef = useRef<MapView>(null);
+  const [driverLocation, setDriverLocation] = useState<Coordinate | null>(null);
+  const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
+  const [resolvedRoute, setResolvedRoute] = useState<{ from: Coordinate | null; to: Coordinate | null }>({
+    from: null,
+    to: null,
+  });
+  const mapRef = useRef<any>(null);
+  const manualFocusUntilRef = useRef(0);
 
-  const fromCoords = order?.route?.from?.coordinates;
-  const toCoords = order?.route?.to?.coordinates;
+  const fromPoint = useMemo(() => getRoutePoint(order, 'from'), [order]);
+  const toPoint = useMemo(() => getRoutePoint(order, 'to'), [order]);
+  const fromCoordinate = getPointCoordinate(fromPoint) || resolvedRoute.from;
+  const toCoordinate = getPointCoordinate(toPoint) || resolvedRoute.to;
+  const cargo = getOrderCargo(order);
+  const customerPrice = getOrderPrice(order);
+  const ownLocationPinColor = isDark ? '#fbbf24' : '#111827';
+
+  const readUserLocation = useCallback(
+    async (focusOnMap = false) => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (focusOnMap) showToast('Разрешите доступ к геопозиции');
+          return null;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const nextLocation = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        };
+
+        setUserLocation(nextLocation);
+
+        if (focusOnMap) {
+          manualFocusUntilRef.current = Date.now() + 2000;
+          focusMapOnCoordinate(mapRef, nextLocation);
+        }
+
+        return nextLocation;
+      } catch (err: any) {
+        console.log('Order details location error:', err?.message || err);
+        if (focusOnMap) showToast('Не удалось определить геопозицию');
+        return null;
+      }
+    },
+    [showToast]
+  );
+
+  useEffect(() => {
+    readUserLocation(true);
+  }, [readUserLocation]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveRouteCoordinates = async () => {
+      const [nextFrom, nextTo] = await Promise.all([
+        resolvePointCoordinate(fromPoint),
+        resolvePointCoordinate(toPoint),
+      ]);
+
+      if (isMounted) {
+        setResolvedRoute({ from: nextFrom, to: nextTo });
+      }
+    };
+
+    if (order?._id) {
+      resolveRouteCoordinates();
+    } else {
+      setResolvedRoute({ from: null, to: null });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [order?._id, fromPoint, toPoint]);
 
   // Socket для реального трекинга водителя
   useEffect(() => {
-    if (!order?._id || !['IN_TRANSIT', 'AT_DROP', 'AT_PICKUP'].includes(order?.status)) return;
+    if (!order?._id) return;
 
     // Если есть координаты executora (водителя) — показываем
-    if (order?.executor?.driver?.location) {
-      setDriverLocation({
-        latitude: order.executor.driver.location.latitude,
-        longitude: order.executor.driver.location.longitude,
-      });
-    }
-  }, [order?._id, order?.status, order?.executor?.driver?.location]);
+    setDriverLocation(getLocationCoordinate(order?.executor?.driver?.location));
+  }, [order?._id, order?.executor?.driver?.location]);
+
+  useEffect(() => {
+    loadOrders?.();
+  }, [loadOrders, params?.id]);
 
   const onAcceptBid = async (bidId: string) => {
     if (!order?._id || !bidId) return;
@@ -91,31 +176,36 @@ export default function OrderDetails() {
   const pendingBids = order?.bids?.filter((b: any) => b.status === 'PENDING') || [];
   // Полная история ставок для чата
   const allBids = order?.bids || [];
+  const historyBids = allBids.filter((b: any) => b.status !== 'PENDING');
 
-  const hasMap = (fromCoords?.lat && fromCoords?.lng) || (toCoords?.lat && toCoords?.lng);
+  const hasMap = Boolean(fromCoordinate || toCoordinate || driverLocation || userLocation);
+  const driverRoutePoint = toPoint;
 
-  const getMapRegion = () => {
-    if (driverLocation) {
-      return {
-        latitude: driverLocation.latitude,
-        longitude: driverLocation.longitude,
-        latitudeDelta: 2,
-        longitudeDelta: 2,
-      };
+  const mapRegion = useMemo(() => {
+    return buildMapRegion([fromCoordinate, toCoordinate, driverLocation, userLocation]);
+  }, [driverLocation, fromCoordinate, toCoordinate, userLocation]);
+
+  useEffect(() => {
+    if (Date.now() < manualFocusUntilRef.current) return;
+    mapRef.current?.animateToRegion?.(mapRegion, 600);
+  }, [mapRegion]);
+
+  const focusOnUserLocation = useCallback(() => {
+    if (userLocation) {
+      manualFocusUntilRef.current = Date.now() + 2000;
+      focusMapOnCoordinate(mapRef, userLocation);
+      return;
     }
-    if (fromCoords?.lat && toCoords?.lat) {
-      const midLat = (fromCoords.lat + toCoords.lat) / 2;
-      const midLng = (fromCoords.lng + toCoords.lng) / 2;
-      const deltaLat = Math.abs(fromCoords.lat - toCoords.lat) * 1.5 || 2;
-      const deltaLng = Math.abs(fromCoords.lng - toCoords.lng) * 1.5 || 2;
-      return { latitude: midLat, longitude: midLng, latitudeDelta: deltaLat, longitudeDelta: deltaLng };
+
+    readUserLocation(true);
+  }, [readUserLocation, userLocation]);
+
+  const openDriverRoute = useCallback(async () => {
+    const opened = await openRouteIn2gis(driverRoutePoint, userLocation);
+    if (!opened) {
+      showToast(t('driver.routeUnavailable', language));
     }
-    if (fromCoords?.lat) {
-      return { latitude: fromCoords.lat, longitude: fromCoords.lng, latitudeDelta: 2, longitudeDelta: 2 };
-    }
-    // Default: Астана
-    return { latitude: 51.1282, longitude: 71.4304, latitudeDelta: 5, longitudeDelta: 5 };
-  };
+  }, [driverRoutePoint, language, showToast, userLocation]);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
@@ -131,7 +221,7 @@ export default function OrderDetails() {
         <View style={[styles.row, styles.justifyBetween, styles.mb4]}>
           <View style={styles.flex1}>
             <Text style={[styles.textGrayXs]}>{t('order.from', language)}</Text>
-            <Text style={[styles.textLgBold, isDark && styles.textWhite]}>{order?.route?.from?.city || t('order.notSpecified', language)}</Text>
+            <Text style={[styles.textLgBold, isDark && styles.textWhite]}>{getRouteLabel(order, 'from', t('order.notSpecified', language))}</Text>
           </View>
           <View style={styles.routeDivider}>
             <View style={[styles.routeDividerLine, isDark && { backgroundColor: '#374151' }]} />
@@ -141,7 +231,7 @@ export default function OrderDetails() {
           </View>
           <View style={[styles.flex1, styles.itemsEnd]}>
             <Text style={[styles.textGrayXs]}>{t('order.to', language)}</Text>
-            <Text style={[styles.textLgBold, isDark && styles.textWhite]}>{order?.route?.to?.city || t('order.notSpecified', language)}</Text>
+            <Text style={[styles.textLgBold, isDark && styles.textWhite]}>{getRouteLabel(order, 'to', t('order.notSpecified', language))}</Text>
           </View>
         </View>
 
@@ -164,21 +254,21 @@ export default function OrderDetails() {
         <View style={[styles.rowWrap]}>
           <View style={styles.halfCol}>
             <Text style={styles.textGrayXs}>{t('order.description', language)}</Text>
-            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{order?.cargoDetails?.description || '—'}</Text>
+            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{cargo.description || '—'}</Text>
           </View>
           <View style={styles.halfCol}>
             <Text style={styles.textGrayXs}>{t('order.weight', language)}</Text>
-            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{order?.cargoDetails?.weight || 0} т</Text>
+            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{cargo.weight} т</Text>
           </View>
           <View style={styles.halfCol}>
             <Text style={styles.textGrayXs}>{t('order.volume', language)}</Text>
-            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{order?.cargoDetails?.volume || 0} м³</Text>
+            <Text style={[styles.textMedium, isDark && styles.textWhite]}>{cargo.volume} м³</Text>
           </View>
           <View style={styles.halfCol}>
             <Text style={styles.textGrayXs}>{t('order.customerPrice', language)}</Text>
             <Text style={styles.textBlueBold}>
-              {order?.pricing?.customerOffer
-                ? `${order.pricing.customerOffer} ₽`
+              {customerPrice
+                ? `${customerPrice} ₽`
                 : t('order.negotiable', language)}
             </Text>
           </View>
@@ -193,18 +283,17 @@ export default function OrderDetails() {
           </Text>
 
           {/* История переговоров */}
-          {allBids.length > 1 && (
+          {historyBids.length > 0 && (
             <View style={[styles.card, isDark && styles.cardDark, styles.mb4]}>
               <View style={[styles.row, styles.mb2]}>
                 <MessageSquare size={16} color="#6b7280" />
                 <Text style={[styles.textGraySm, styles.ml2]}>История торгов</Text>
               </View>
-              {allBids
-                .filter((b: any) => b.status !== 'PENDING')
+              {historyBids
                 .map((b: any, idx: number) => (
                 <View key={b._id || idx} style={{
                   paddingVertical: 6,
-                  borderBottomWidth: idx < allBids.length - 1 ? 1 : 0,
+                  borderBottomWidth: idx < historyBids.length - 1 ? 1 : 0,
                   borderBottomColor: isDark ? '#374151' : '#f3f4f6',
                 }}>
                   <View style={[styles.row, styles.justifyBetween]}>
@@ -355,28 +444,28 @@ export default function OrderDetails() {
               {['IN_TRANSIT', 'AT_DROP'].includes(order?.status) ? t('order.tracking', language) : 'Маршрут'}
             </Text>
           </View>
-          <View style={{ height: 220, borderRadius: 16, overflow: 'hidden' }}>
+          <View style={{ height: 220, borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
             <MapView
               ref={mapRef}
               style={{ flex: 1 }}
               provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-              initialRegion={getMapRegion()}
-              showsUserLocation={role === 'DRIVER'}
-              showsMyLocationButton={role === 'DRIVER'}
+              initialRegion={mapRegion}
+              showsUserLocation={false}
+              showsMyLocationButton={false}
             >
-              {fromCoords?.lat && fromCoords?.lng && (
+              {fromCoordinate && (
                 <Marker
-                  coordinate={{ latitude: fromCoords.lat, longitude: fromCoords.lng }}
+                  coordinate={fromCoordinate}
                   title="Погрузка"
-                  description={order?.route?.from?.city || ''}
+                  description={getRouteLabel(order, 'from', '')}
                   pinColor="#22c55e"
                 />
               )}
-              {toCoords?.lat && toCoords?.lng && (
+              {toCoordinate && (
                 <Marker
-                  coordinate={{ latitude: toCoords.lat, longitude: toCoords.lng }}
+                  coordinate={toCoordinate}
                   title="Выгрузка"
-                  description={order?.route?.to?.city || ''}
+                  description={getRouteLabel(order, 'to', '')}
                   pinColor="#ef4444"
                 />
               )}
@@ -387,25 +476,39 @@ export default function OrderDetails() {
                   pinColor="#3b82f6"
                 />
               )}
-              {fromCoords?.lat && toCoords?.lat && (
-                <Polyline
-                  coordinates={[
-                    { latitude: fromCoords.lat, longitude: fromCoords.lng },
-                    ...(driverLocation ? [driverLocation] : []),
-                    { latitude: toCoords.lat, longitude: toCoords.lng },
-                  ]}
-                  strokeColor="#3b82f6"
-                  strokeWidth={3}
-                  lineDashPattern={[10, 5]}
+              {userLocation && (
+                <Marker
+                  coordinate={userLocation}
+                  title="Вы здесь"
+                  description="Ваше местоположение"
+                  pinColor={ownLocationPinColor}
                 />
               )}
             </MapView>
+            <TouchableOpacity
+              style={styles.mapLocateButton}
+              onPress={focusOnUserLocation}
+              activeOpacity={0.85}
+            >
+              <LocateFixed size={22} color="#2563eb" />
+            </TouchableOpacity>
           </View>
-          {fromCoords?.lat && toCoords?.lat && (
+          {fromCoordinate && toCoordinate && (
             <View style={[styles.row, styles.justifyBetween, styles.mt3]}>
-              <Text style={styles.textGrayXs}>🟢 {order?.route?.from?.city}</Text>
-              <Text style={styles.textGrayXs}>🔴 {order?.route?.to?.city}</Text>
+              <Text style={styles.textGrayXs}>🟢 {getRouteLabel(order, 'from', '')}</Text>
+              <Text style={styles.textGrayXs}>🔴 {getRouteLabel(order, 'to', '')}</Text>
             </View>
+          )}
+          {role === 'DRIVER' && (
+            <TouchableOpacity style={[styles.btnBlue, styles.mt3]} onPress={openDriverRoute}>
+              <View style={styles.row}>
+                <Navigation size={18} color="white" />
+                <Text style={styles.btnTextWhite}>
+                  {' '}
+                  {t('driver.routeToDrop', language)}
+                </Text>
+              </View>
+            </TouchableOpacity>
           )}
         </View>
       )}

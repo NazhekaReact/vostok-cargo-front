@@ -13,7 +13,7 @@ const roles = [
 export default function AuthScreen({ onAuth, showToast }: any) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [role, setRole] = useState('CUSTOMER');
-  const [name, setName] = useState('Didar');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -101,6 +101,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
             <TextInput
               style={styles.inputIcon}
               placeholder="Имя"
+              placeholderTextColor="#9ca3af"
               value={name}
               onChangeText={setName}
             />
@@ -112,6 +113,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
           <TextInput
             style={styles.inputIcon}
             placeholder="Email"
+            placeholderTextColor="#9ca3af"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -124,6 +126,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
           <TextInput
             style={styles.inputIcon}
             placeholder="Пароль"
+            placeholderTextColor="#9ca3af"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -136,6 +139,7 @@ export default function AuthScreen({ onAuth, showToast }: any) {
             <TextInput
               style={styles.inputIcon}
               placeholder="Телефон"
+              placeholderTextColor="#9ca3af"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"

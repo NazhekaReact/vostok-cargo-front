@@ -1,36 +1,44 @@
-import { ArrowRight, Navigation } from 'lucide-react-native';
-import React, { useContext, useEffect, useState } from 'react';
-import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { ArrowRight } from 'lucide-react-native';
+import React, { useCallback, useContext } from 'react';
+import { Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from '../../components/MapViewCompat';
 import OrderCard from '../../components/OrderCard';
 import AppContext from '../../context/AppContext';
 import styles from '../../styles/appStyles';
 import { t } from '../../utils/i18n';
+import { buildMapRegion, getLocationCoordinate, getPointCoordinate } from '../../utils/mapUtils';
+import { getRouteLabel, getRoutePoint } from '../../utils/orderData';
 
 export default function CustomerDashboard() {
-  const { navigate, orders, isDark, language } = useContext(AppContext);
+  const { navigate, orders, loadOrders, loadingOrders, isDark, language } = useContext(AppContext);
+  const refreshOrders = useCallback(() => {
+    loadOrders?.();
+  }, [loadOrders]);
   const active = orders.find((o: any) =>
-    ['IN_TRANSIT', 'AT_PICKUP', 'AT_DROP'].includes(o.status)
+    ['APPROVED', 'ASSIGNED', 'AT_PICKUP', 'IN_TRANSIT', 'AT_DROP'].includes(o.status)
   );
 
-  const fromCoords = active?.route?.from?.coordinates;
-  const toCoords = active?.route?.to?.coordinates;
-  const hasCoords = fromCoords?.lat || toCoords?.lat;
-
-  const getRegion = () => {
-    if (fromCoords?.lat && toCoords?.lat) {
-      return {
-        latitude: (fromCoords.lat + toCoords.lat) / 2,
-        longitude: (fromCoords.lng + toCoords.lng) / 2,
-        latitudeDelta: Math.abs(fromCoords.lat - toCoords.lat) * 1.5 || 2,
-        longitudeDelta: Math.abs(fromCoords.lng - toCoords.lng) * 1.5 || 2,
-      };
-    }
-    return { latitude: 51.1282, longitude: 71.4304, latitudeDelta: 5, longitudeDelta: 5 };
-  };
+  const fromPoint = getRoutePoint(active, 'from');
+  const toPoint = getRoutePoint(active, 'to');
+  const fromCoordinate = getPointCoordinate(fromPoint);
+  const toCoordinate = getPointCoordinate(toPoint);
+  const driverCoordinate = getLocationCoordinate(active?.executor?.driver?.location);
+  const hasCoords = Boolean(fromCoordinate || toCoordinate || driverCoordinate);
+  const mapRegion = buildMapRegion([fromCoordinate, toCoordinate, driverCoordinate]);
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.scrollPadding}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={Boolean(loadingOrders)}
+          onRefresh={refreshOrders}
+          tintColor="#3b82f6"
+          colors={['#3b82f6']}
+        />
+      }
+    >
       <Text style={[styles.screenTitle, isDark && styles.textWhite]}>{t('customer.myOrders', language)}</Text>
 
       {/* Карточка активной перевозки с картой */}
@@ -46,22 +54,30 @@ export default function CustomerDashboard() {
                 <MapView
                   style={{ flex: 1 }}
                   provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                  initialRegion={getRegion()}
+                  initialRegion={mapRegion}
                   scrollEnabled={false}
                   zoomEnabled={false}
                   pitchEnabled={false}
                   rotateEnabled={false}
                 >
-                  {fromCoords?.lat && (
+                  {fromCoordinate && (
                     <Marker
-                      coordinate={{ latitude: fromCoords.lat, longitude: fromCoords.lng }}
+                      coordinate={fromCoordinate}
                       pinColor="#22c55e"
                     />
                   )}
-                  {toCoords?.lat && (
+                  {toCoordinate && (
                     <Marker
-                      coordinate={{ latitude: toCoords.lat, longitude: toCoords.lng }}
+                      coordinate={toCoordinate}
                       pinColor="#ef4444"
+                    />
+                  )}
+                  {driverCoordinate && (
+                    <Marker
+                      coordinate={driverCoordinate}
+                      title="Ваш водитель"
+                      description="Текущее местоположение"
+                      pinColor="#3b82f6"
                     />
                   )}
                 </MapView>
@@ -85,11 +101,11 @@ export default function CustomerDashboard() {
               </View>
               <View style={[styles.row, styles.mt3]}>
                 <Text style={styles.textGraySm}>
-                  {active.route?.from?.city || '—'}
+                  {getRouteLabel(active, 'from', '—')}
                 </Text>
                 <ArrowRight size={14} color="#9ca3af" style={{ marginHorizontal: 8 }} />
                 <Text style={styles.textGraySm}>
-                  {active.route?.to?.city || '—'}
+                  {getRouteLabel(active, 'to', '—')}
                 </Text>
               </View>
             </View>

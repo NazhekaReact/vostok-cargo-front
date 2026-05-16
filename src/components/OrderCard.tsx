@@ -11,6 +11,7 @@ import React, { useContext, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import AppContext from '../context/AppContext';
 import styles from '../styles/appStyles';
+import { getOrderCargo, getOrderPrice, getRouteLabel } from '../utils/orderData';
 
 export default function OrderCard({ order, onClick, actionButton }: any) {
   const [expanded, setExpanded] = useState(false);
@@ -51,28 +52,13 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
     });
   }, [order?.createdAt]);
 
-  const cargoDescription =
-    order?.cargoDetails?.description ||
-    order?.cargoDetails?.cargoName ||
-    order?.cargoDetails?.name ||
-    '—';
-
-  const cargoWeight =
-    order?.cargoDetails?.weight ??
-    order?.cargoDetails?.weightKg ??
-    order?.cargoDetails?.mass ??
-    0;
-
-  const cargoVolume =
-    order?.cargoDetails?.volume ??
-    order?.cargoDetails?.volumeM3 ??
-    0;
-
-  const price =
-    order?.pricing?.customerOffer ??
-    order?.pricing?.price ??
-    order?.price ??
-    null;
+  const cargo = getOrderCargo(order);
+  const cargoDescription = cargo.description || '—';
+  const cargoWeight = cargo.weight;
+  const cargoVolume = cargo.volume;
+  const price = getOrderPrice(order);
+  const fromLabel = getRouteLabel(order, 'from');
+  const toLabel = getRouteLabel(order, 'to');
 
   return (
     <TouchableOpacity
@@ -84,19 +70,27 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
       }}
     >
       <View style={styles.cardHeader}>
-        <View style={styles.row}>
+        <View style={[styles.row, styles.orderCardHeaderLeft]}>
           <View style={[styles.iconBoxBlue, isDark && styles.iconBoxBlueDark]}>
             <Box size={20} color="#3b82f6" />
           </View>
 
-          <View style={styles.ml3}>
-            <View style={styles.row}>
-              <Text style={[styles.cardCityText, isDark && styles.textWhite]}>
-                {order?.route?.from?.city || 'Не указано'}
+          <View style={[styles.ml3, styles.orderCardHeaderText]}>
+            <View style={styles.orderRouteRow}>
+              <Text
+                style={[styles.cardCityText, styles.orderRouteCity, isDark && styles.textWhite]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {fromLabel}
               </Text>
               <ArrowRight size={14} color="#9ca3af" style={styles.mx1} />
-              <Text style={[styles.cardCityText, isDark && styles.textWhite]}>
-                {order?.route?.to?.city || 'Не указано'}
+              <Text
+                style={[styles.cardCityText, styles.orderRouteCity, isDark && styles.textWhite]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {toLabel}
               </Text>
             </View>
 
@@ -107,8 +101,12 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
           </View>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-          <Text style={[styles.statusBadgeText, { color: statusInfo.text }]}>
+        <View style={[styles.statusBadge, styles.orderStatusBadge, { backgroundColor: statusInfo.bg }]}>
+          <Text
+            style={[styles.statusBadgeText, { color: statusInfo.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {statusInfo.label}
           </Text>
         </View>
@@ -121,7 +119,14 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Груз</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Truck size={14} color="#60a5fa" />
-                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoDescription}</Text>
+                <Text
+                  style={[styles.detailsValue, styles.detailsValueText, isDark && styles.textWhite]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {' '}
+                  {cargoDescription}
+                </Text>
               </View>
             </View>
 
@@ -129,7 +134,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Вес</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Weight size={14} color="#60a5fa" />
-                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoWeight} т</Text>
+                <Text style={[styles.detailsValue, styles.detailsValueText, isDark && styles.textWhite]} numberOfLines={1}> {cargoWeight} т</Text>
               </View>
             </View>
 
@@ -137,7 +142,7 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Объем</Text>
               <View style={[styles.row, styles.mt1]}>
                 <Maximize2 size={14} color="#60a5fa" />
-                <Text style={[styles.detailsValue, isDark && styles.textWhite]}> {cargoVolume} м³</Text>
+                <Text style={[styles.detailsValue, styles.detailsValueText, isDark && styles.textWhite]} numberOfLines={1}> {cargoVolume} м³</Text>
               </View>
             </View>
 
@@ -145,9 +150,13 @@ export default function OrderCard({ order, onClick, actionButton }: any) {
               <Text style={styles.detailsLabel}>Ставка</Text>
               <View style={[styles.row, styles.mt1]}>
                 <CircleDollarSign size={14} color="#60a5fa" />
-                <Text style={[styles.detailsValue, isDark && styles.textWhite]}>
+                <Text
+                  style={[styles.detailsValue, styles.detailsValueText, isDark && styles.textWhite]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {' '}
-                  {price !== null ? `${price} ₽` : 'Договорная'}
+                  {price !== undefined ? `${price} ₽` : 'Договорная'}
                 </Text>
               </View>
             </View>
